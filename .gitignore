@@ -1,0 +1,25 @@
+# Python virtualenv
+backend/.venv/
+
+# PyInstaller build artifacts
+backend/build/
+backend/__pycache__/
+backend/*.pyc
+
+# The compiled EXE lives in Releases, not in git
+dist/
+
+# Frontend temp files
+frontend/*.tmp
+
+# Runtime logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor directories
+.vscode/
+.idea/
