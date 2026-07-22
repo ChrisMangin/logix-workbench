@@ -1,0 +1,929 @@
+/* ── reset & variables ──────────────────────────────────────────────────── */
+:root{
+  --bg:#0d1117; --surface:#161b22; --surface2:#21262d; --surface3:#30363d;
+  --border:#30363d; --border2:#484f58;
+  --text:#e6edf3; --text2:#8b949e; --text3:#6e7681;
+  --accent:#2f81f7; --accentHover:#388bfd;
+  --green:#3fb950; --red:#f85149; --orange:#d29922; --purple:#a5d6ff;
+  --rll:#2f81f7; --st:#3fb950; --udt:#e3b341;
+  --fontMono:Consolas,"Courier New",monospace;
+  --fontUI:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --radius:6px; --orgW:280px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--fontUI);background:var(--bg);color:var(--text);height:100vh;overflow:hidden;}
+
+/* ── root layout ───────────────────────────────────────────────────────── */
+#root{display:flex;flex-direction:column;height:100vh;}
+#toolbar{display:flex;align-items:center;gap:10px;padding:0 14px;height:40px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+.logo{font-weight:700;font-size:14px;color:var(--accent);margin-right:6px;}
+.tbGroup{display:flex;gap:6px;}
+.docName{color:var(--text2);font-size:12px;margin-left:auto;}
+#workspace{display:flex;flex:1;overflow:hidden;}
+#organizer{width:var(--orgW);min-width:180px;max-width:500px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;}
+#orgHeader{padding:8px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);border-bottom:1px solid var(--border);}
+#orgSearch{padding:6px 8px;border-bottom:1px solid var(--border);}
+#orgSearch input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:var(--radius);font-size:12px;}
+#orgTree{flex:1;overflow-y:auto;padding:4px 0;}
+#resizer{width:4px;background:var(--border);cursor:col-resize;flex-shrink:0;}
+#resizer:hover{background:var(--accent);}
+#content{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+#statusBar{height:24px;display:flex;align-items:center;gap:14px;padding:0 12px;background:var(--surface);border-top:1px solid var(--border);font-size:11px;color:var(--text2);flex-shrink:0;}
+#modifiedFlag{color:var(--orange);}
+
+/* ── buttons ────────────────────────────────────────────────────────────── */
+button,label.tbFile,label.big{background:var(--surface2);color:var(--text);border:1px solid var(--border2);padding:5px 12px;border-radius:var(--radius);cursor:pointer;font-size:12px;font-family:var(--fontUI);}
+button:hover:not(:disabled),label.tbFile:hover,label.big:hover{border-color:var(--accent);background:var(--surface3);}
+button:disabled{opacity:.4;cursor:not-allowed;}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+button.primary:hover:not(:disabled){background:var(--accentHover);}
+button.danger{background:var(--red);border-color:var(--red);color:#fff;}
+button.danger:hover:not(:disabled){opacity:.85;}
+button.sm{padding:3px 8px;font-size:11px;}
+button.icon{padding:3px 6px;font-size:12px;min-width:26px;}
+
+/* ── welcome ────────────────────────────────────────────────────────────── */
+#welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;text-align:center;color:var(--text2);}
+#welcome h2{color:var(--text);font-size:22px;}
+#welcome p{font-size:14px;}
+.welcomeBtns{display:flex;gap:10px;margin-top:8px;}
+.welcomeBtns button,.welcomeBtns label.big{padding:10px 22px;font-size:14px;}
+
+/* ── organizer tree ─────────────────────────────────────────────────────── */
+.treeNode{user-select:none;}
+.treeRow{display:flex;align-items:center;gap:5px;padding:3px 8px 3px 0;cursor:pointer;font-size:13px;border-radius:4px;white-space:nowrap;}
+.treeRow:hover{background:var(--surface2);}
+.treeRow.active{background:var(--accent) !important;color:#fff;}
+.treeRow.active .rowMeta{color:rgba(255,255,255,.7);}
+.treeToggle{width:16px;text-align:center;color:var(--text3);font-size:10px;flex-shrink:0;}
+.treeIcon{width:16px;text-align:center;flex-shrink:0;}
+.rowLabel{flex:1;overflow:hidden;text-overflow:ellipsis;}
+.rowMeta{font-size:11px;color:var(--text3);flex-shrink:0;}
+.treeChildren{padding-left:14px;}
+.treeAddBtn{background:none;border:none;color:var(--green);cursor:pointer;padding:0 4px;font-size:14px;line-height:1;opacity:.7;}
+.treeAddBtn:hover{opacity:1;}
+
+/* ── content panels ─────────────────────────────────────────────────────── */
+.panel{display:flex;flex-direction:column;height:100%;overflow:hidden;}
+.panelHead{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.panelHead h2{font-size:16px;font-weight:600;}
+.panelHead .spacer{flex:1;}
+.panelBody{flex:1;overflow-y:auto;padding:14px 16px;}
+
+/* ── search / filter bar ────────────────────────────────────────────────── */
+.filterBar{display:flex;gap:8px;margin-bottom:12px;align-items:center;}
+.filterBar input{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:var(--radius);font-size:13px;flex:1;}
+.filterBar select{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:var(--radius);font-size:13px;}
+
+/* ── data table ──────────────────────────────────────────────────────────── */
+.dataTable{width:100%;border-collapse:collapse;font-size:13px;}
+.dataTable th{text-align:left;padding:6px 10px;border-bottom:2px solid var(--border2);color:var(--text2);font-weight:500;font-size:12px;position:sticky;top:0;background:var(--surface);z-index:1;}
+.dataTable td{padding:6px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.dataTable tr:hover td{background:var(--surface2);}
+.dataTable .type{color:var(--purple);font-family:var(--fontMono);font-size:12px;}
+.dataTable .val{color:var(--green);font-family:var(--fontMono);font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dataTable .desc{color:var(--text2);font-size:12px;}
+.dataTable .acts{white-space:nowrap;}
+.acts{display:flex;gap:5px;}
+
+/* ── pagination ──────────────────────────────────────────────────────────── */
+.pagination{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:12px;color:var(--text2);}
+.pagination button{padding:4px 10px;}
+
+/* ── property grid ───────────────────────────────────────────────────────── */
+.propGrid{display:grid;grid-template-columns:180px 1fr;gap:1px;font-size:13px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;}
+.propGrid .pk{background:var(--surface2);padding:7px 12px;color:var(--text2);font-weight:500;}
+.propGrid .pv{background:var(--surface);padding:7px 12px;font-family:var(--fontMono);font-size:12px;word-break:break-all;}
+
+/* ── rung list ───────────────────────────────────────────────────────────── */
+.rungList{display:flex;flex-direction:column;gap:8px;}
+.rungCard{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);overflow:hidden;}
+.rungCardHead{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface2);border-bottom:1px solid var(--border);}
+.rungNum{font-size:11px;color:var(--text2);min-width:60px;}
+.rungComment{font-size:12px;color:var(--orange);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rungCardBody{padding:8px 10px;}
+
+/* ── rung builder ────────────────────────────────────────────────────────── */
+.builderWrap{display:flex;flex-direction:column;gap:6px;}
+.modeTabs{display:flex;gap:4px;margin-bottom:6px;}
+.modeTabs button{padding:4px 12px;font-size:12px;}
+.instrList{display:flex;flex-direction:column;gap:4px;min-height:32px;}
+.instrChip{display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:12px;font-family:var(--fontMono);}
+.instrChip.condition{border-left:3px solid var(--accent);}
+.instrChip.output{border-left:3px solid var(--green);}
+.instrText{flex:1;overflow-wrap:anywhere;}
+.instrActs{display:flex;gap:3px;flex-shrink:0;}
+.instrActs button{padding:1px 5px;font-size:11px;}
+.addInstrRow{display:flex;gap:6px;align-items:center;}
+.rungPreview{font-family:var(--fontMono);font-size:11px;color:var(--text2);background:var(--surface2);padding:6px 8px;border-radius:var(--radius);word-break:break-all;margin-top:4px;}
+.rungComment-input{flex:1;min-width:0;background:var(--surface2);border:1px solid var(--border);color:var(--orange);padding:5px 8px;border-radius:var(--radius);font-size:12px;}
+
+/* ── dialog ──────────────────────────────────────────────────────────────── */
+dialog{background:var(--surface);color:var(--text);border:1px solid var(--border2);border-radius:10px;padding:20px 24px;min-width:340px;max-width:520px;}
+dialog h3{font-size:15px;margin-bottom:14px;}
+dialog label{display:block;font-size:12px;color:var(--text2);margin-bottom:8px;}
+dialog label input,dialog label select,dialog label textarea{display:block;width:100%;margin-top:3px;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:var(--radius);font-size:13px;font-family:inherit;}
+.dlgBtns{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+.operandsBox{display:flex;flex-direction:column;gap:6px;margin:10px 0;}
+.operandsBox label{font-size:12px;}
+
+/* ── misc ───────────────────────────────────────────────────────────────── */
+.hidden{display:none!important;}
+.badge{background:var(--surface3);color:var(--text2);border-radius:10px;padding:1px 7px;font-size:11px;}
+.badge.rll{background:rgba(47,129,247,.2);color:var(--accent);}
+.badge.st{background:rgba(63,185,80,.2);color:var(--green);}
+.tag-array{color:var(--orange);}
+.empty{color:var(--text3);font-style:italic;font-size:13px;text-align:center;padding:30px;}
+.sectionHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.sectionHead h3{font-size:14px;font-weight:600;}
+.stEditor{width:100%;min-height:400px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--fontMono);font-size:13px;padding:10px;border-radius:var(--radius);resize:vertical;}
+#toast{position:fixed;bottom:24px;right:24px;padding:10px 16px;border-radius:var(--radius);font-size:13px;opacity:0;transform:translateY(8px);transition:all .22s;pointer-events:none;border:1px solid var(--border2);background:var(--surface);}
+#toast.show{opacity:1;transform:none;}
+#toast.ok{border-color:var(--green);color:#7ee787;}
+#toast.err{border-color:var(--red);color:#ffa198;}
+
+/* ── Ladder diagram visual rendering ────────────────────────────────────── */
+.ladderRung{display:flex;align-items:stretch;background:#0a0e14;border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;overflow-x:auto;margin-bottom:10px;}
+.rail{width:4px;min-width:4px;background:var(--border2);flex-shrink:0;border-radius:2px;align-self:stretch;}
+.rungWire{display:flex;align-items:stretch;flex:1;min-width:0;min-height:56px;cursor:default;}
+body.ldDragging .rungWire,.rungWire:has(.wireDragOver){cursor:copy;}
+.wireSeg{height:2px;background:var(--border2);flex:0 0 14px;align-self:center;}
+.wireSeg.long{flex:1 1 auto;align-self:center;}
+.ladderElem{display:flex;flex-direction:column;align-items:center;align-self:center;flex-shrink:0;position:relative;}
+.ladderElem .elemLabel{font-size:10px;color:var(--text2);margin-top:2px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:normal;word-break:break-word;text-align:center;line-height:1.15;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.ladderElem .elemLabel.dim{color:var(--text3);font-style:italic;}
+
+.ladderElem.editable:hover .symContact .cBar,.ladderElem.editable:hover .symCoil{filter:brightness(1.4);}
+.ladderElem.editable:hover .symBlock{border-color:#fff;}
+.ladderElem .elemDel{position:absolute;top:-8px;right:-8px;width:16px;height:16px;line-height:14px;padding:0;font-size:9px;border-radius:50%;background:var(--red,#c94b4b);color:#fff;border:1px solid #0a0e14;cursor:pointer;opacity:0;transition:opacity .12s;}
+.ladderElem:hover .elemDel{opacity:1;}
+.addInline{display:flex;gap:4px;flex-shrink:0;margin-left:4px;}
+.addInline button{width:26px;height:22px;padding:0;font-size:11px;}
+.listToggle{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);margin:8px 0 4px;cursor:pointer;}
+.listToggle input{width:auto;margin:0;}
+.branchTools{display:flex;justify-content:flex-end;gap:4px;padding:2px 6px;}
+.legRemove{margin-left:6px;}
+
+.symContact{width:30px;height:26px;display:flex;align-items:center;justify-content:center;gap:5px;position:relative;}
+.symContact .cBar{width:3px;height:24px;background:var(--accent);border-radius:1px;}
+.symContact.neg .cSlash{position:absolute;width:2px;height:30px;background:var(--accent);transform:rotate(25deg);}
+
+.symCoil{width:28px;height:28px;border:3px solid var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;background:transparent;}
+.symCoil .coilChar{font-size:12px;font-weight:700;color:var(--green);}
+
+.symBlock{border:2px solid var(--orange);border-radius:4px;background:var(--surface2);min-width:110px;overflow:hidden;}
+.symBlock .blockTitle{background:var(--orange);color:#1a1300;font-weight:700;font-size:11px;text-align:center;padding:2px 8px;}
+.symBlock .blockBody{padding:4px 8px;display:flex;flex-direction:column;gap:2px;}
+.symBlock .blockRow{font-size:10px;color:var(--text2);font-family:var(--fontMono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px;}
+
+/* ── raw rung textarea (was tiny — now sized properly + resizable) ──────── */
+textarea.rawRungText{width:100%;min-height:160px;resize:vertical;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--fontMono);font-size:13px;padding:10px;border-radius:var(--radius);}
+
+/* ── Ladder branches (parallel OR groups) ───────────────────────────────── */
+.ladderBranch{display:flex;flex-direction:column;border-top:2px solid var(--border2);border-bottom:2px solid var(--border2);border-left:2px solid var(--border2);border-right:2px solid var(--border2);border-radius:4px;margin:0 6px;position:relative;}
+.ladderBranch::before{content:"";position:absolute;left:-6px;top:0;bottom:0;width:6px;border-top:2px solid var(--border2);border-bottom:2px solid var(--border2);}
+.ladderBranchLeg{display:flex;align-items:center;padding:6px 8px;border-bottom:1px dashed var(--border);}
+.ladderBranchLeg:last-child{border-bottom:none;}
+.branchLegWire{display:flex;align-items:stretch;min-height:44px;}
+
+/* ── Branch editor (in the editable instruction list) ───────────────────── */
+.branchCard{border:1px solid var(--orange);border-radius:var(--radius);padding:8px 10px;margin:4px 0;background:rgba(210,153,34,.06);}
+.branchCardHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.branchCardTitle{font-size:12px;font-weight:600;color:var(--orange);}
+.branchLegEditor{border:1px dashed var(--border2);border-radius:4px;padding:6px 8px;margin:4px 0 4px 12px;}
+.branchLegHead{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:4px;}
+.branchLegEditor button.sm{margin-top:4px;}
+
+/* ── decluttered visual builder: light heading over the edit list, since
+   the ladder diagram above it is now the primary visual (no more redundant
+   raw-text-string line under everything) ─────────────────────────────── */
+.editListHead{font-size:11px;color:var(--text3);margin:6px 0 2px;text-transform:uppercase;letter-spacing:.03em;}
+
+/* ── AOI detail: Parameters / Local Tags / Logic tabs ────────────────────── */
+.modeTabs{display:flex;gap:6px;margin-bottom:10px;}
+
+/* ── generic "name + dynamic rows" dialog (New Data Type / New AOI) ──────── */
+dialog.rowDialog{width:520px;max-width:92vw;}
+.dlgRowsHead{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.03em;margin:10px 0 4px;}
+.dlgRows{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;}
+.dlgRow{display:flex;gap:6px;align-items:center;}
+.dlgRow input{flex:2;}
+.dlgRow select{flex:1;}
+
+/* ── tag bit / UDT-member breakdown (expand DINT -> .0.. / UDT -> members) */
+.expArrow{background:none;border:none;color:var(--text3);cursor:pointer;padding:0 4px 0 0;font-size:10px;width:auto;}
+.expArrow:hover{color:var(--text);}
+.expArrowSpacer{display:inline-block;width:14px;}
+.bdName{font-family:var(--fontMono);}
+tr.breakdownRow{background:var(--surface2);}
+tr.breakdownRow td{font-size:12px;}
+
+/* ── toolbar Find / Cross-Reference ──────────────────────────────────────── */
+.tbFind{flex:0 1 320px;}
+.tbFind input{width:100%;min-width:140px;}
+dialog.findDialog{width:640px;max-width:92vw;max-height:80vh;overflow-y:auto;}
+.findBody{display:flex;flex-direction:column;gap:4px;}
+.findHit{border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;margin:4px 0;cursor:pointer;background:var(--surface2);}
+.findHit:hover{border-color:var(--accent);}
+.findHitHead{font-size:12px;margin-bottom:4px;}
+.findHitText{font-family:var(--fontMono);font-size:11px;color:var(--text2);white-space:pre-wrap;word-break:break-all;margin:0;}
+
+/* ── one Visual/Raw toggle for the whole routine (not per-rung) ─────────── */
+.routineModeToggle{margin-bottom:10px;}
+
+.dlgRow input[type="number"]{flex:0 0 90px;}
+
+.penSwatch{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:middle;border:1px solid rgba(255,255,255,.25);}
+
+/* ── compact rung card header (badge + inline comment + acts) ────────────── */
+.rungNumBadge{font-family:var(--fontMono);font-size:11px;color:var(--text2);background:var(--surface3);border:1px solid var(--border);border-radius:3px;padding:1px 6px;min-width:38px;text-align:center;flex-shrink:0;cursor:grab;user-select:none;}
+.rungNumBadge:active{cursor:grabbing;}
+.rungCommentInline{flex:1;min-width:0;background:transparent;border:none;border-bottom:1px solid rgba(210,153,34,.3);color:var(--orange);padding:2px 4px;font-size:12px;font-family:inherit;}
+.rungCommentInline::placeholder{color:var(--text3,#555);}
+.rungCommentInline:focus{outline:none;border-bottom-color:var(--accent);}
+.rungHeadActs{display:flex;gap:4px;flex-shrink:0;}
+
+/* ── alias tag type display ───────────────────────────────────────────────── */
+.aliasType{color:var(--text2);font-style:italic;font-size:11px;}
+
+/* ── task type badges ─────────────────────────────────────────────────────── */
+.badge.continuous{background:rgba(63,185,80,.2);color:var(--green);}
+.badge.periodic{background:rgba(255,166,0,.2);color:#ffa600;}
+.badge.event{background:rgba(210,120,255,.2);color:#d278ff;}
+
+/* ── inline data type editing ────────────────────────────────────────────── */
+.inlineDesc{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:var(--radius);font-size:13px;margin:8px 0 10px;box-sizing:border-box;}
+.editableTable input,.editableTable select{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:3px 5px;border-radius:3px;font-size:12px;width:100%;box-sizing:border-box;}
+.editableTable input:focus,.editableTable select:focus{outline:none;border-color:var(--accent);}
+
+/* ── clickable tree-link for task → program navigation ───────────────────── */
+.treeLink{color:var(--accent);cursor:pointer;text-decoration:underline;}
+
+/* ── rung control bar (Visual/Raw toggle + Save All) ─────────────────────── */
+.rungCtrlBar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+.rungCtrlBar .routineModeToggle{margin-bottom:0;}
+
+/* ── rung selection dimming ──────────────────────────────────────────────── */
+.rungCard.selected{outline:2px solid var(--accent);outline-offset:-2px;}
+.rungCard.dimmed{opacity:0.45;}
+
+/* ── insert dot on wire — always interactive (pointer-events:auto), looks like a wire segment ── */
+.insertDot{
+  height:auto;align-self:stretch;flex:1 1 20px;min-width:14px;
+  background:transparent;border:none;padding:0;
+  cursor:pointer;  /* full wire gap is clickable */
+  display:flex;align-items:center;justify-content:center;position:relative;
+}
+/* Full-width insert dot (condition\u2192output gap, or empty rung) */
+.insertDot.wireSplit{flex:1 1 auto!important;max-width:none!important;}
+/* Full-width insert dot (condition—output gap, or empty rung) */
+.insertDot::before{
+  content:'';position:absolute;
+  top:50%;transform:translateY(-50%);
+  width:100%;height:2px;
+  background:var(--border2);border-radius:1px;
+  transition:background .15s,height .15s;
+}
+.insertDot:hover::before{background:rgba(59,130,246,.5);height:3px;}
+/* Selected insert position — click-to-select workflow */
+.insertDot.insertSelected::before{
+  background:var(--accent)!important;height:4px;border-radius:2px;
+}
+.insertDot.insertSelected{
+  /* selected state: no flex override, keep auto-width */
+}
+/* Small tick mark above the wire to show cursor position */
+.insertDot.insertSelected::after{
+  content:"▼";  /* down-pointing triangle = "insert here" */
+  position:absolute;
+  top:-14px;
+  font-size:9px;
+  color:var(--accent);
+  left:50%;transform:translateX(-50%);
+}
+.insertDot.expanded{height:auto;background:var(--surface2);border:1px solid var(--accent);
+  border-radius:var(--radius);padding:2px 5px;display:inline-flex;align-items:center;gap:3px;cursor:default;}
+.insertDot.expanded::before{display:none;}
+.insertDot.expanded::after{display:none;}
+.insertDot.expanded button{padding:1px 6px;font-size:11px;}
+
+/* ── Language Element Toolbar ──────────────────────────────────────────── */
+.elemToolbar{position:sticky;top:0;z-index:10;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;font-size:11px;}
+.tbGrp{display:flex;align-items:center;gap:3px;flex-wrap:wrap;}
+.tbGrpLabel{color:var(--text2);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding-right:3px;white-space:nowrap;}
+.tbInstr{padding:2px 6px;font-size:11px;font-family:var(--fontMono);min-width:36px;}
+.tbInstr.tbSpecial{font-family:var(--fontUI);min-width:auto;padding:2px 8px;}
+.tbStructure{border-left:1px solid var(--border2);padding-left:8px;margin-left:4px;}
+
+/* ── Per-rung mode toggle ──────────────────────────────────────────────── */
+.rungModeBtn{font-size:10px;padding:2px 6px;opacity:.7;}
+.rungModeBtn:hover{opacity:1;}
+
+/* ── Inline editing inputs ─────────────────────────────────────────────── */
+.tagInlineEdit,.instrCodeEdit{background:var(--surface2);border:1px solid var(--accent);color:var(--text);border-radius:3px;font-size:11px;font-family:var(--fontMono);padding:0 3px;outline:none;}
+.tagInlineEdit:focus,.instrCodeEdit:focus{border-color:var(--accentHover);box-shadow:0 0 0 2px rgba(47,129,247,.25);}
+
+/* ── Module/Task form dialogs ──────────────────────────────────────────── */
+.formDialog{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);padding:20px;min-width:320px;max-width:420px;}
+.formDialog h3{margin-bottom:14px;font-size:15px;}
+.formDialog label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--text2);margin-bottom:10px;}
+.formDialog input,.formDialog select{background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:5px 8px;border-radius:var(--radius);font-size:13px;font-family:var(--fontUI);}
+.formDialog input:focus,.formDialog select:focus{border-color:var(--accent);outline:none;}
+
+/* ── sortable table headers ───────────────────────────────────────────────── */
+th.sortable{cursor:pointer;user-select:none;white-space:nowrap;}
+th.sortable:hover{color:var(--accent);}
+.sortArrow{margin-left:3px;font-size:10px;color:var(--accent);}
+
+/* ── Element selection & drag-and-drop ────────────────────────────────────── */
+.ladderElem.editable{cursor:pointer;}
+.ladderElem.editable:hover{outline:1px dashed var(--accent);outline-offset:2px;}
+.ladderElem.selected{outline:2px solid var(--accent)!important;outline-offset:2px;box-shadow:0 0 0 3px rgba(59,130,246,.15);}
+.ladderElem.dragging{opacity:.35;pointer-events:none;}
+.insertDot.dragOver::before{background:var(--accent)!important;height:6px!important;border-radius:3px;}
+.insertDot.dragOver{background:rgba(59,130,246,.12);}
+.rungCard.dragging{opacity:.4;}
+.rungCard.rungDragOver{outline:2px dashed var(--accent);outline-offset:-2px;background:rgba(59,130,246,.06);}
+.ladderBranch.editable{cursor:pointer;}
+.ladderBranch.editable:hover{outline:1px dashed var(--accent);outline-offset:3px;}
+.ladderBranch.selected{outline:2px solid #f59e0b!important;outline-offset:3px;}
+
+/* ── Syntax highlighting palette (VS Code dark theme–inspired) ─────────────── */
+.hl-i   {color:#4ec9b0;font-weight:600;}
+.hl-tag {color:#9cdcfe;}
+.hl-kw  {color:#c586c0;font-weight:600;}
+.hl-lop {color:#569cd6;font-weight:600;}
+.hl-bool{color:#4fc1ff;}
+.hl-num {color:#b5cea8;}
+.hl-cm  {color:#6a9955;font-style:italic;}
+.hl-str {color:#ce9178;}
+.hl-br  {color:#ffd700;}
+.hl-sc  {color:#888;font-weight:600;}
+.hl-op  {color:#d4d4d4;}
+.hl-empty{color:var(--textMuted);font-style:italic;}
+.syntaxPre{
+  font-family:'Consolas','Cascadia Code','Courier New',monospace;
+  font-size:13px;line-height:1.55;
+  background:#1e1e1e!important;color:#d4d4d4!important;
+  border:1px solid var(--border2);padding:10px 12px;
+  border-radius:var(--radius);white-space:pre-wrap;word-break:break-all;
+  cursor:pointer;min-height:3em;transition:border-color .15s;
+}
+.syntaxPre:hover{border-color:var(--accent);}
+.syntaxTa{
+  font-family:'Consolas','Cascadia Code','Courier New',monospace;
+  font-size:13px;line-height:1.55;
+  background:#1e1e1e!important;color:#d4d4d4!important;
+  border:2px solid var(--accent);padding:10px 12px;
+  border-radius:var(--radius);resize:vertical;min-height:80px;
+  width:100%;box-sizing:border-box;
+}
+
+/* ── Drag expansion — insertDots grow during any drag so they're easy to hit ── */
+body.ldDragging .insertDot{
+  /* No flex-size change — avoids rung layout shift during toolbar drag.
+     Visual highlight is handled by ::before height/color below. */
+  cursor:copy!important;
+}
+body.ldDragging .insertDot::before{
+  height:4px!important;background:rgba(59,130,246,.35)!important;
+}
+body.ldDragging .insertDot:hover::before{
+  height:6px!important;background:var(--accent)!important;
+}
+.wireDragOver{outline:2px dashed var(--accent);outline-offset:1px;background:rgba(59,130,246,.08);}
+.tbDragging{opacity:.6;cursor:grabbing!important;}
+/* Compare panel — path-based compare (primary workflow) */
+.cmpPathRow{display:flex;align-items:center;gap:8px;padding:4px 0;flex-wrap:nowrap;}
+.cmpPathSlot{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0;}
+.cmpPathSlotA .cmpPathInp{border-color:rgba(59,130,246,.5);}
+.cmpPathSlotB .cmpPathInp{border-color:rgba(34,197,94,.4);}
+.cmpPathLbl{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+.cmpPathInp{width:100%;padding:5px 8px;font-size:12px;font-family:monospace;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--fg);}
+.cmpPathInp:focus{outline:none;border-color:var(--accent);}
+.cmpBrowseRow{display:flex;align-items:center;gap:8px;min-width:0;}
+.cmpBrowseBtn{flex-shrink:0;padding:4px 10px;font-size:11px;}
+.cmpPathName{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-family:monospace;color:var(--text2);background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:4px 7px;}
+.cmpPathName.hasFile{color:var(--fg);border-color:var(--accent);}
+
+/* Toolbar buttons get a grab cursor to hint at draggability */
+.tbInstr{cursor:grab;}
+.tbInsertHint{color:var(--accent);font-size:11px;font-style:italic;margin-left:4px;display:none;}
+.tbInsertHint.active{display:inline;}
+/* Wide clickable area for element selection */
+.ladderElem.editable{cursor:pointer;user-select:none;}
+/* ── Validation footer panel ─────────────────────────────────────────────── */
+/* Drop-side indicator when dragging over an instruction element */
+.ladderElem[data-drop-side="before"]{box-shadow:-3px 0 0 0 var(--accent);}
+.ladderElem[data-drop-side="after"]{box-shadow:3px 0 0 0 var(--accent);}
+/* Editable rungWire: pointer cursor so user knows wire is clickable */
+.ladderRung.editable .rungWire{cursor:pointer;}
+#valFooter{
+  background:var(--surface);border-top:2px solid var(--border2);
+  max-height:220px;overflow-y:auto;flex-shrink:0;
+}
+#valFooter.hidden{display:none;}
+.valHdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:5px 12px;background:var(--surface2);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:1;
+}
+.valTitle{font-size:13px;font-weight:600;}
+.valClose{
+  background:none;border:none;cursor:pointer;font-size:16px;
+  padding:0 4px;line-height:1;color:var(--text2);
+}
+.valClose:hover{color:var(--text);}
+.valList{padding:4px 0;}
+.valItem{
+  padding:4px 14px;font-size:12px;font-family:var(--font-mono,monospace);
+  border-bottom:1px solid rgba(0,0,0,.04);line-height:1.5;
+}
+.valItem.valErr{color:#ef4444;background:rgba(239,68,68,.06);}
+.valItem.valWarn{color:#d97706;background:rgba(217,119,6,.06);}
+.valItem.valOk{color:var(--text2);font-style:italic;}
+.valItem[style*="cursor"]:hover{background:rgba(59,130,246,.12);}
+
+/* ── progress bar ───────────────────────────────────────────────────────── */
+#progressBar{
+  position:fixed;top:0;left:0;width:100%;height:3px;
+  z-index:99999;pointer-events:none;opacity:0;
+  transition:opacity .25s;
+}
+#progressBar.active{opacity:1;}
+#progressFill{
+  height:100%;width:0%;background:var(--accent);
+  transition:width .35s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 0 8px var(--accent);
+}
+
+/* ── Tab bar ─────────────────────────────────────────────────────────────── */
+#tabBar{
+  display:flex;align-items:center;gap:2px;padding:0 8px;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  flex-shrink:0;overflow-x:auto;height:34px;
+}
+.wbTab{
+  display:flex;align-items:center;gap:5px;padding:5px 12px;
+  border-radius:4px 4px 0 0;cursor:pointer;font-size:12px;
+  color:var(--text2);border:1px solid transparent;border-bottom:none;
+  background:transparent;transition:background .12s,color .12s;white-space:nowrap;
+  margin-bottom:-1px;
+}
+.wbTab:hover{background:var(--surface2);color:var(--text);}
+.wbTab.active{background:var(--bg);color:var(--text);border-color:var(--border);}
+.wbTabIcon{font-size:13px;}
+.wbTabLabel{max-width:160px;overflow:hidden;text-overflow:ellipsis;}
+.wbTabClose{
+  margin-left:4px;color:var(--text3);font-size:14px;line-height:1;
+  padding:0 2px;border-radius:3px;cursor:pointer;
+}
+.wbTabClose:hover{background:var(--surface3);color:var(--text);}
+.wbTabNew{
+  margin-left:6px;padding:3px 10px;font-size:11px;border-radius:4px;
+  background:none;border:1px solid var(--border);color:var(--text3);
+  cursor:pointer;transition:all .12s;white-space:nowrap;
+}
+.wbTabNew:hover{background:var(--surface2);color:var(--text);border-color:var(--accent);}
+.wbTabSep{color:var(--border);padding:0 4px;align-self:center;font-size:16px;user-select:none;}
+
+/* ── Compare overlay ──────────────────────────────────────────────────────── */
+#cmpOverlay{
+  position:absolute;top:0;left:0;right:0;bottom:0;z-index:10;
+  display:flex;background:var(--bg);overflow:hidden;
+}
+#cmpOverlay.hidden{display:none;}
+#workspace{position:relative;}
+
+/* ── Compare wrap / top bar ──────────────────────────────────────────────── */
+.cmpWrap{display:flex;flex-direction:column;width:100%;overflow:hidden;}
+.cmpTopBar{
+  display:flex;flex-direction:column;gap:4px;padding:10px 14px;
+  background:var(--surface2);border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.cmpPickSlot{
+  display:flex;align-items:center;flex:1;min-width:160px;max-width:280px;
+  border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;
+  background:var(--surface);transition:border-color .15s;cursor:pointer;
+}
+.cmpPickSlot.ready{border-color:var(--accent);}
+.cmpPickBtn{
+  display:flex;align-items:center;gap:7px;padding:6px 10px;
+  cursor:pointer;width:100%;
+}
+.cmpPickIcon{
+  width:22px;height:22px;border-radius:4px;display:flex;align-items:center;
+  justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;
+}
+.cmpIconA{background:var(--red);color:#fff;}
+.cmpIconB{background:var(--green);color:#fff;}
+.cmpPickMeta{flex:1;min-width:0;}
+.cmpPickLbl{font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);}
+.cmpPickName{font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cmpTopArrow{font-size:18px;color:var(--text3);flex-shrink:0;}
+.cmpRunBtn{min-width:110px;flex-shrink:0;}
+.cmpViewToggle{display:flex;gap:2px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;flex-shrink:0;}
+.cmpViewBtn{
+  padding:4px 10px;font-size:11px;background:var(--surface);
+  color:var(--text2);border:none;cursor:pointer;transition:background .1s,color .1s;
+}
+.cmpViewBtn.active{background:var(--accent);color:#fff;}
+.cmpIconBtn{
+  padding:4px 10px;font-size:11px;border:1px solid var(--border);
+  border-radius:var(--radius);background:var(--surface);color:var(--text2);
+  cursor:pointer;transition:background .12s;white-space:nowrap;
+}
+.cmpIconBtn:hover{background:var(--surface2);color:var(--text);}
+
+/* ── Hint / Empty ────────────────────────────────────────────────────────── */
+.cmpBody{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.cmpHint{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:12px;color:var(--text2);text-align:center;padding:40px;
+}
+.cmpHintIcon{font-size:48px;color:var(--text3);}
+.cmpHintSub{font-size:12px;color:var(--text3);}
+
+/* ── 3-column layout ─────────────────────────────────────────────────────── */
+.cmpLayout{
+  display:grid;grid-template-columns:260px 6px 1fr 1fr;
+  overflow:hidden;flex:1;
+}
+.cmpResizer{
+  cursor:col-resize;background:var(--border);width:6px;flex-shrink:0;
+  transition:background .12s;z-index:1;
+}
+.cmpResizer:hover,.cmpResizer.dragging{background:var(--accent);}
+
+/* ── Diff tree (left) ────────────────────────────────────────────────────── */
+.cmpTreePane{
+  display:flex;flex-direction:column;overflow:hidden;
+  border-right:1px solid var(--border);background:var(--surface);
+}
+.cmpTreeHeader{
+  padding:7px 12px;font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--text3);background:var(--surface2);
+  border-bottom:1px solid var(--border);flex-shrink:0;
+  display:flex;align-items:center;gap:8px;
+}
+.cmpTreeBadge{
+  background:var(--orange);color:#fff;font-size:10px;padding:1px 6px;
+  border-radius:10px;font-weight:700;
+}
+.cmpTreeScroll{flex:1;overflow-y:auto;padding:4px 0;}
+
+/* Use existing treeRow/treeNode styles + diff overrides */
+.cmpDiffRow .cmpTreePill{margin-left:auto;flex-shrink:0;}
+.cmpDiffRow .cmpMigrateBtns{display:flex;gap:2px;margin-left:4px;flex-shrink:0;}
+.cmpMigrateBtn{
+  font-size:9px;padding:1px 5px;border-radius:3px;cursor:pointer;
+  border:1px solid var(--border);background:var(--surface2);color:var(--text3);
+  font-weight:700;
+}
+.cmpMigrateAB:hover{background:var(--green);color:#fff;border-color:var(--green);}
+.cmpMigrateBA:hover{background:var(--red);color:#fff;border-color:var(--red);}
+
+.cmpTreePill{
+  width:15px;height:15px;border-radius:3px;display:inline-flex;align-items:center;
+  justify-content:center;font-size:9px;font-weight:800;flex-shrink:0;
+}
+.cmpTreePill-added{background:rgba(63,185,80,.2);color:var(--green);}
+.cmpTreePill-removed{background:rgba(248,81,73,.2);color:var(--red);}
+.cmpTreePill-changed{background:rgba(210,153,34,.2);color:var(--orange);}
+
+/* ── Right split panes ───────────────────────────────────────────────────── */
+.cmpRightGrid{display:grid;grid-template-columns:1fr 1fr;overflow:hidden;grid-column:3/5;}
+.cmpSidePane{display:flex;flex-direction:column;overflow:hidden;}
+.cmpSidePaneA{border-right:1px solid var(--border);}
+.cmpSidePaneHdr{
+  padding:6px 14px;display:flex;align-items:center;gap:8px;font-size:11px;
+  background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.cmpFilePill{
+  width:18px;height:18px;border-radius:3px;display:flex;align-items:center;
+  justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;
+}
+.cmpFilePillA{background:var(--red);color:#fff;}
+.cmpFilePillB{background:var(--green);color:#fff;}
+.cmpFileName{font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cmpSidePaneBody{flex:1;overflow-y:auto;padding:12px;}
+.cmpPaneHint{font-size:12px;color:var(--text3);font-style:italic;margin:0;}
+.cmpSecHdr{font-size:11px;font-weight:600;color:var(--text2);
+  margin:8px 0 4px;padding-bottom:3px;border-bottom:1px solid var(--border);}
+
+/* ── Content widgets ─────────────────────────────────────────────────────── */
+.cmpAbsent{font-size:12px;color:var(--text3);font-style:italic;padding:8px 0;}
+.cmpKVRow{
+  display:flex;align-items:baseline;gap:8px;padding:5px 0;
+  border-bottom:1px solid var(--border);font-size:12px;
+}
+.cmpKVKey{color:var(--text3);min-width:90px;flex-shrink:0;font-size:11px;}
+.cmpKVVal{color:var(--text);word-break:break-all;}
+.cmpValRemoved .cmpKVVal{color:var(--red);}
+.cmpValAdded   .cmpKVVal{color:var(--green);}
+.cmpValChanged .cmpKVVal{color:var(--orange);}
+.cmpDetailTbl{border-collapse:collapse;width:100%;font-size:12px;}
+.cmpDetailTbl th,.cmpDetailTbl td{padding:4px 10px;border:1px solid var(--border);text-align:left;}
+.cmpDetailTbl th{background:var(--surface2);color:var(--text2);font-size:11px;}
+.cmpRowAdded   td{background:rgba(63,185,80,.12);color:var(--green);}
+.cmpRowRemoved td{background:rgba(248,81,73,.12);color:var(--red);}
+.cmpRowChanged td{background:rgba(210,153,34,.12);color:var(--orange);}
+
+/* ── Rung cards used read-only in compare view ───────────────────────────── */
+.cmpRoRung .rungHeadActs{display:none;}
+.cmpRoRung input.rungCommentInline{pointer-events:none;}
+.rungCard.cmpRungRemoved{border-color:var(--red);background:rgba(248,81,73,.07);}
+.rungCard.cmpRungAdded  {border-color:var(--green);background:rgba(63,185,80,.07);}
+.rungCard.cmpRungChanged{border-color:var(--orange);background:rgba(210,153,34,.07);}
+
+/* ── Rung display (visual mode) ──────────────────────────────────────────── */
+.cmpRungCard{
+  padding:7px 12px;margin-bottom:4px;border-radius:var(--radius);
+  border:1px solid var(--border);background:var(--surface);
+  font-family:var(--fontMono);font-size:11px;
+}
+.cmpRungRemoved{background:rgba(248,81,73,.12);border-color:var(--red);}
+.cmpRungAdded  {background:rgba(63,185,80,.12);border-color:var(--green);}
+.cmpRungChanged{background:rgba(210,153,34,.12);border-color:var(--orange);}
+.cmpRungNum{font-size:10px;color:var(--text3);display:block;margin-bottom:3px;}
+.cmpRungComment{font-size:10px;color:var(--text3);font-style:italic;margin-bottom:2px;white-space:pre-wrap;}
+.cmpRungText{white-space:pre-wrap;word-break:break-all;color:var(--text);}
+
+/* ── Tag diff table ──────────────────────────────────────────────────────── */
+.cmpTagTbl{border-collapse:collapse;width:100%;font-size:12px;margin-bottom:10px;}
+.cmpTagTbl th,.cmpTagTbl td{padding:5px 10px;border:1px solid var(--border);text-align:left;}
+.cmpTagTbl th{background:var(--surface2);color:var(--text2);font-size:11px;font-weight:600;}
+.cmpTagTbl td{color:var(--text);}
+.cmpCellRemoved{background:rgba(248,81,73,.18);color:var(--red)!important;}
+.cmpCellAdded  {background:rgba(63,185,80,.18);color:var(--green)!important;}
+.cmpCellChanged{background:rgba(210,153,34,.18);color:var(--orange)!important;}
+
+/* ── Rung display (raw text mode) ────────────────────────────────────────── */
+.cmpRawPre{
+  margin:0;padding:10px 12px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);font-family:var(--fontMono);font-size:11px;
+  overflow-x:auto;
+}
+.cmpRawLine{padding:1px 0;white-space:pre;}
+.cmpRawCom{padding:1px 0 0 12px;white-space:pre;font-style:italic;}
+.cmpRawRem{color:var(--red);}
+.cmpRawAdd{color:var(--green);}
+.cmpRawChg{color:var(--orange);}
+.cmpRawSame{color:var(--text3);}
+
+/* ── Organizer hidden state (when no file is open) ───────────────────────── */
+#organizer.hidden, #resizer.hidden { display:none !important; }
+
+/* ── Tag/member row highlight (scrolled-to from diff tree) ───────────────── */
+.cmpRowHighlight { outline:2px solid var(--accent); outline-offset:-2px; }
+
+/* ── Single-pane mode for non-routine diff types ─────────────────────────── */
+.cmpRightGrid.cmpSinglePane {
+  grid-template-columns: 1fr !important;
+}
+.cmpRightGrid.cmpSinglePane .cmpSidePaneB {
+  display: none;
+}
+.cmpRightGrid.cmpSinglePane .cmpSidePaneA {
+  min-width: 0;
+  overflow: auto;
+}
+
+/* ── AOI tabbed compare view ──────────────────────────────────────────────── */
+.aoiTabBar {
+  display: flex; gap: 4px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+.aoiTab {
+  padding: 4px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--fontSans);
+}
+.aoiTab:hover { background: var(--surface3, var(--surface2)); color: var(--text); }
+.aoiTab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.aoiTabContent { overflow: auto; flex: 1; }
+.aoiLogicGrid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.aoiLogicCol { overflow: auto; }
+
+/* ── Toolbar disabled state (e.g. Open on home screen) ──────────────────── */
+.tbDisabled { opacity: 0.38; pointer-events: none; cursor: default; }
+
+/* ── Editor empty-tab hint ───────────────────────────────────────────────── */
+.editorEmptyHint {
+  padding: 40px 32px;
+  color: var(--text3, #888);
+  font-size: 13px;
+  max-width: 480px;
+}
+.editorEmptyHint strong { color: var(--text1, #e0e0e0); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   HOME SCREEN / WELCOME
+   ══════════════════════════════════════════════════════════════════════════ */
+.welcomeScreen { padding: 32px 40px; max-width: 900px; margin: 0 auto; }
+
+.welcomeHero { text-align: center; padding: 32px 0 24px; }
+.welcomeLogoMark { font-size: 48px; line-height: 1; margin-bottom: 8px; }
+.welcomeTitle { font-size: 28px; font-weight: 700; margin: 0 0 6px; color: var(--accent, #4b9cf5); }
+.welcomeTagline { color: var(--text3, #888); font-size: 13px; margin: 0 0 14px; }
+.welcomeHint { color: var(--text2, #aaa); font-size: 12px; margin: 0 0 16px; }
+.welcomeHint kbd {
+  background: var(--surface2, #2c2c2e); border: 1px solid var(--border, #3a3a3c);
+  border-radius: 4px; padding: 1px 6px; font-size: 11px; font-family: inherit;
+}
+.welcomeGuideBtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface2, #2c2c2e); border: 1px solid var(--border, #3a3a3c);
+  color: var(--text1, #e0e0e0); padding: 7px 16px; border-radius: 6px;
+  cursor: pointer; font-size: 13px; transition: background .15s;
+}
+.welcomeGuideBtn:hover { background: var(--surface3, #3a3a3c); }
+
+.welcomeCards { display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap: 14px; margin-bottom: 28px; }
+.welcomeFeatureCard {
+  background: var(--surface2, #1e1e20); border: 1px solid var(--border, #333);
+  border-radius: 10px; padding: 18px 16px; transition: border-color .15s;
+}
+/* .welcomeFeatureCard:hover intentionally removed — cards are informational only */
+.wfIcon { font-size: 26px; margin-bottom: 8px; }
+.welcomeFeatureCard strong { display: block; margin-bottom: 4px; font-size: 13px; }
+.welcomeFeatureCard p { font-size: 12px; color: var(--text3, #888); margin: 0; line-height: 1.5; }
+
+.welcomeRecentSec { border-top: 1px solid var(--border, #333); padding-top: 20px; }
+.welcomeRecentTitle { font-size: 13px; font-weight: 600; margin: 0 0 10px; color: var(--text2, #aaa); text-transform: uppercase; letter-spacing: .06em; }
+.welcomeRecentList { display: flex; flex-direction: column; gap: 4px; }
+.welcomeRecentRow {
+  display: flex; align-items: center; gap: 10px; padding: 6px 8px;
+  border-radius: 6px; font-size: 12px; color: var(--text2, #bbb);
+  cursor: default; transition: background .12s;
+}
+.welcomeRecentRow.clickable { cursor: pointer; }
+.welcomeRecentRow.clickable:hover {
+  background: var(--surface2, #2c2c2e); color: var(--text1, #e0e0e0);
+}
+.welcomeRecentRow.clickable:hover .wrName { color: var(--accent, #4b9cf5); }
+.wrIcon { font-size: 14px; flex-shrink: 0; }
+.wrName { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wrDate { color: var(--text3, #666); font-size: 11px; flex-shrink: 0; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   USER GUIDE DIALOG
+   ══════════════════════════════════════════════════════════════════════════ */
+dialog.userGuide {
+  background: var(--surface1, #1a1a1c); border: 1px solid var(--border, #333);
+  border-radius: 12px; color: var(--text1, #e0e0e0); padding: 0;
+  max-width: 680px; width: 90vw; max-height: 80vh; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+dialog.userGuide::backdrop { background: rgba(0,0,0,.55); }
+.ugHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border, #333); flex-shrink: 0;
+}
+.ugHeader h2 { font-size: 15px; font-weight: 600; margin: 0; }
+.ugClose {
+  background: none; border: none; color: var(--text3, #888); font-size: 18px;
+  cursor: pointer; padding: 2px 6px; border-radius: 4px; line-height: 1;
+}
+.ugClose:hover { background: var(--surface2, #2c2c2e); color: var(--text1, #e0e0e0); }
+.ugBody { overflow-y: auto; padding: 20px; flex: 1; }
+.ugSection { margin-bottom: 22px; }
+.ugSection h3 { font-size: 13px; font-weight: 600; color: var(--accent, #4b9cf5); margin: 0 0 8px; border-bottom: 1px solid var(--border, #333); padding-bottom: 6px; }
+.ugSection ol, .ugSection ul { margin: 0; padding-left: 20px; }
+.ugSection li { font-size: 12px; line-height: 1.7; color: var(--text2, #bbb); }
+.ugSection li strong { color: var(--text1, #e0e0e0); }
+.ugTable { border-collapse: collapse; width: 100%; font-size: 12px; }
+.ugTable td { padding: 4px 10px; color: var(--text2, #bbb); }
+.ugTable td:first-child kbd {
+  background: var(--surface2, #2c2c2e); border: 1px solid var(--border, #3a3a3c);
+  border-radius: 4px; padding: 1px 6px; font-family: inherit; font-size: 11px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   COMPARE OPTIONS ROW
+   ══════════════════════════════════════════════════════════════════════════ */
+.cmpOptRow {
+  display: flex; align-items: center; gap: 12px; padding: 4px 0;
+  font-size: 12px; color: var(--text2, #aaa);
+}
+.cmpOptLabel { font-weight: 600; margin-right: 4px; }
+.cmpOptItem { display: flex; align-items: center; cursor: pointer; gap: 3px; user-select: none; }
+.cmpOptItem input[type=checkbox] { cursor: pointer; accent-color: var(--accent, #4b9cf5); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TAG TYPE BADGES & ACCESS INDICATORS
+   ══════════════════════════════════════════════════════════════════════════ */
+.tagTypeBadge {
+  display: inline-block; border-radius: 3px; padding: 1px 5px;
+  font-size: 10px; font-weight: 600; line-height: 1.4; white-space: nowrap;
+}
+.tagTypeBadgeBase  { background: var(--surface2, #2c2c2e); color: var(--text3, #888); }
+.tagTypeBadgeAlias { background: #2d3a1e; color: #8bc34a; }
+.tagTypeBadgeProd  { background: #1e2d3a; color: #4fc3f7; }
+.tagTypeBadgeCons  { background: #3a1e2d; color: #f06292; }
+.tagRadix { font-size: 10px; color: var(--text3, #888); margin-left: 4px; }
+.tagAccess { display: inline-block; border-radius: 3px; padding: 1px 4px; font-size: 10px; font-weight: 600; margin-left: 4px; }
+.tagAccessRO   { background: #3a2a00; color: #ffb300; }
+.tagAccessNone { background: var(--surface2, #2c2c2e); color: var(--text3, #666); }
+
+.cmpTreeSearch{display:block;width:100%;box-sizing:border-box;padding:5px 8px;font-size:12px;background:var(--surface2);border:none;border-bottom:1px solid var(--border);color:var(--fg);outline:none;}
+.cmpTreeSearch:focus{border-bottom-color:var(--accent);}
+
+
+/* ======================================================================
+   v11 additions
+   ====================================================================== */
+
+/* Tree collapse/expand toolbar */
+.treeCtrlBar {
+  display: flex; gap: 4px; padding: 4px 6px 2px;
+  border-bottom: 1px solid var(--border,#333); flex-shrink: 0;
+}
+.treeCtrlBtn {
+  font-size: 10px; padding: 2px 7px; border-radius: 4px;
+  background: var(--surface2,#2c2c2e); border: 1px solid var(--border,#3a3a3c);
+  color: var(--text2,#bbb); cursor: pointer; line-height: 1.4;
+}
+.treeCtrlBtn:hover { background: var(--surface3,#3a3a3c); color: var(--text1,#e0e0e0); }
+
+/* Recent files filter row */
+.welcomeRecentHdr {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+.welcomeRecentHdr h3 { margin: 0; }
+.welcomeRecentFilter {
+  font-size: 12px; padding: 4px 10px; border-radius: 6px;
+  background: var(--surface2,#2c2c2e); border: 1px solid var(--border,#3a3a3c);
+  color: var(--text1,#e0e0e0); outline: none; width: 160px;
+}
+.welcomeRecentFilter:focus { border-color: var(--accent,#4b9cf5); }
+
+/* Keyboard shortcut cheatsheet */
+.shortcutBox {
+  background: var(--surface1,#1a1a1c); border: 1px solid var(--border,#333);
+  border-radius: 12px; color: var(--text1,#e0e0e0);
+  min-width: 320px; max-width: 440px; overflow: hidden;
+}
+.shortcutHdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid var(--border,#333);
+  font-weight: 600; font-size: 13px;
+}
+.shortcutGrid { padding: 12px 16px; }
+.scSection {
+  font-size: 10px; font-weight: 700; color: var(--accent,#4b9cf5);
+  text-transform: uppercase; letter-spacing: .07em;
+  padding: 10px 0 4px; border-bottom: 1px solid var(--border,#333);
+  margin-bottom: 4px;
+}
+.scRow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 3px 0; font-size: 12px; color: var(--text2,#bbb);
+}
+.scRow kbd {
+  background: var(--surface2,#2c2c2e); border: 1px solid var(--border,#3a3a3c);
+  border-radius: 4px; padding: 1px 6px; font-size: 11px;
+  font-family: inherit; white-space: nowrap; min-width: 90px;
+  text-align: center; color: var(--text1,#e0e0e0);
+}
+
+/* Compare export diff button */
+.cmpExportBtn {
+  font-size: 10px; padding: 2px 8px; border-radius: 4px; margin-left: 8px;
+  background: var(--surface2,#2c2c2e); border: 1px solid var(--border,#3a3a3c);
+  color: var(--text2,#bbb); cursor: pointer; vertical-align: middle;
+}
+.cmpExportBtn:hover { background: var(--surface3,#3a3a3c); color: var(--text1,#e0e0e0); }
+
+/* Find highlight flash on rung cards */
+.cmpFindHighlight {
+  animation: findFlash 0.4s ease-out forwards;
+}
+@keyframes findFlash {
+  0%   { box-shadow: 0 0 0 3px var(--accent,#4b9cf5); background: rgba(75,156,245,.18); }
+  100% { box-shadow: 0 0 0 0 transparent; background: transparent; }
+}
+
+/* Right-click context menu */
+.ctxMenu {
+  background: var(--surface1,#1a1a1c); border: 1px solid var(--border,#3a3a3c);
+  border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.5);
+  min-width: 180px; overflow: hidden; padding: 4px 0;
+}
+.ctxItem {
+  padding: 7px 14px; font-size: 12px; color: var(--text2,#bbb);
+  cursor: pointer; white-space: nowrap;
+}
+.ctxItem:hover { background: var(--surface2,#2c2c2e); color: var(--text1,#e0e0e0); }
