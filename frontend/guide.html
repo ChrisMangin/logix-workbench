@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Logix Workbench — User Guide</title>
+<style>
+  :root {
+    --bg: #111113; --surface1: #1a1a1c; --surface2: #2c2c2e; --surface3: #3a3a3c;
+    --border: #333; --text1: #e0e0e0; --text2: #bbb; --text3: #888;
+    --accent: #4b9cf5; --green: #34c759; --red: #ff453a; --orange: #ff9f0a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text1);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 13px; line-height: 1.6;
+  }
+  .page { max-width: 820px; margin: 0 auto; padding: 40px 24px 80px; }
+  .pageHeader {
+    display: flex; align-items: center; gap: 16px; margin-bottom: 40px;
+    padding-bottom: 20px; border-bottom: 2px solid var(--border);
+  }
+  .pageIcon { font-size: 36px; }
+  .pageHeader h1 { font-size: 22px; font-weight: 700; }
+  .pageHeader p { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  section { margin-bottom: 32px; }
+  h2 {
+    font-size: 14px; font-weight: 700; color: var(--accent);
+    padding-bottom: 6px; border-bottom: 1px solid var(--border);
+    margin-bottom: 14px; text-transform: uppercase; letter-spacing: .05em;
+  }
+  ol, ul { padding-left: 20px; }
+  li { font-size: 12.5px; color: var(--text2); margin-bottom: 7px; }
+  li strong { color: var(--text1); }
+  li em { color: var(--text3); }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  th { text-align: left; padding: 6px 12px; color: var(--text3); font-weight: 600;
+       border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; }
+  td { padding: 6px 12px; color: var(--text2); border-bottom: 1px solid var(--surface3); }
+  tr:last-child td { border-bottom: none; }
+  kbd {
+    background: var(--surface2); border: 1px solid var(--surface3);
+    border-radius: 4px; padding: 1px 6px; font-size: 11px;
+    font-family: inherit; white-space: nowrap; color: var(--text1);
+  }
+  .tip {
+    background: var(--surface2); border-left: 3px solid var(--accent);
+    border-radius: 6px; padding: 10px 14px; font-size: 12px;
+    color: var(--text2); margin: 12px 0;
+  }
+  .tip strong { color: var(--accent); }
+  code {
+    font-family: "Cascadia Code", "Consolas", monospace; font-size: 11px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 5px; color: var(--orange);
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="pageHeader">
+    <div class="pageIcon">&#x1F4D6;</div>
+    <div>
+      <h1>Logix Workbench &mdash; User Guide</h1>
+      <p>Studio 5000-style editor &amp; comparison tool for Allen-Bradley .L5X files</p>
+    </div>
+  </div>
+
+  <!-- ── Getting Started ─────────────────────────────── -->
+  <section>
+    <h2>&#x1F680; Getting Started</h2>
+    <ol>
+      <li>Click <strong>+ Editor</strong> in the tab bar to open an editor tab.</li>
+      <li>Click <strong>Open</strong> in the toolbar &mdash; a native <strong>file explorer</strong> window opens. Browse to your <code>.L5X</code> file and select it. No upload needed; the server reads directly from disk.</li>
+      <li>The <strong>Controller Organizer</strong> sidebar shows your project tree &mdash; click any item to view or edit it.</li>
+      <li>Click <strong>+ Compare</strong> to open a comparison tab. Click the <strong>File A</strong> and <strong>File B</strong> slots to browse each file, then click <strong>Compare &#x21c4;</strong>.</li>
+      <li><strong>Recent files</strong> on the Home screen are clickable &mdash; use the filter box to narrow by name or path.</li>
+    </ol>
+    <div class="tip"><strong>Tip:</strong> Multiple <strong>+ Editor</strong> tabs let you work on several files at once. Switch between them with <kbd>Ctrl+Tab</kbd>.</div>
+  </section>
+
+  <!-- ── Editor ──────────────────────────────────────── -->
+  <section>
+    <h2>&#x1F5C2; Editor</h2>
+    <ul>
+      <li><strong>Controller Organizer</strong> &mdash; Left sidebar. Use <strong>- Collapse All</strong> / <strong>+ Expand All</strong> buttons at the top to manage the tree. Click any node to open it in the content pane.</li>
+      <li><strong>Tags</strong> &mdash; View tags by type (Base, Alias, Produced, Consumed). Click <strong>&#x25B6;</strong> on any expandable tag (UDT, DINT, array) to drill into members or bits. Right-click any row to <strong>Copy name</strong> or <strong>Copy value</strong> to clipboard.</li>
+      <li><strong>Ladder Rungs</strong> &mdash; Visual diagram mode with click-to-edit. Double-click any instruction or tag name to edit inline. Switch to Raw text mode via the mode buttons. Use <kbd>Ctrl+G</kbd> to jump directly to a rung number.</li>
+      <li><strong>AOIs</strong> &mdash; Opens in a tabbed view: <em>Parameters</em>, <em>Local Tags</em>, <em>Logic</em>. Parameters show Default value; logic is fully editable.</li>
+      <li><strong>Data Types</strong> &mdash; View the full member table. Edit members inline or add new ones.</li>
+      <li><strong>I/O Configuration</strong> &mdash; View all modules and their connection properties.</li>
+      <li><strong>Tasks &amp; Programs</strong> &mdash; Browse scheduled programs, their tags, and routines from the task tree.</li>
+      <li><strong>Save</strong> &mdash; Downloads the modified <code>.L5X</code> back to your computer. Use <em>Close</em> to unload the current file.</li>
+    </ul>
+  </section>
+
+  <!-- ── Compare ─────────────────────────────────────── -->
+  <section>
+    <h2>&#x21c4; Compare</h2>
+    <ul>
+      <li>Click <strong>+ Compare</strong>, select <strong>File A</strong> (baseline) and <strong>File B</strong> (revised), then click <strong>Compare &#x21c4;</strong>.</li>
+      <li>The left panel shows a <strong>diff tree</strong> of every change. Use the filter box to search by name. Click any item to render it side-by-side in File A and File B panes.</li>
+      <li><strong>Find</strong> (&#x1F50D; icon / toolbar search) in compare mode searches rung text, tag names, routine names, data type names, and AOI names across the entire diff.</li>
+      <li>When a find result is selected, the tool navigates to the correct routine and <strong>scrolls to the exact rung</strong> in the A or B pane where the match was found.</li>
+      <li>Click <strong>&#x1F4CB; Copy Diff</strong> in the Changes header to copy a plain-text summary of all changes to the clipboard.</li>
+      <li>Options: <em>Comments</em> includes rung comments in the diff. <em>Tag Values</em> includes initial tag values.</li>
+      <li>Visual / Raw Text toggle switches all rung cards between diagram and text modes without rerunning the comparison.</li>
+    </ul>
+    <div class="tip"><strong>Tip:</strong> The diff detects changes in rung <em>content</em> even when rung count is identical &mdash; catches edits that only changed rung text or instructions.</div>
+  </section>
+
+  <!-- ── Keyboard Shortcuts ──────────────────────────── -->
+  <section>
+    <h2>&#x2328; Keyboard Shortcuts</h2>
+    <table>
+      <thead><tr><th>Shortcut</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td><kbd>Ctrl+S</kbd></td><td>Save the current file</td></tr>
+        <tr><td><kbd>Ctrl+O</kbd></td><td>Open a file (when Editor tab is active)</td></tr>
+        <tr><td><kbd>Ctrl+N</kbd></td><td>New file</td></tr>
+        <tr><td><kbd>Ctrl+W</kbd></td><td>Close the current tab</td></tr>
+        <tr><td><kbd>Ctrl+F</kbd></td><td>Focus the find / search box</td></tr>
+        <tr><td><kbd>Ctrl+Tab</kbd></td><td>Switch to next tab</td></tr>
+        <tr><td><kbd>Ctrl+Shift+Tab</kbd></td><td>Switch to previous tab</td></tr>
+        <tr><td><kbd>Ctrl+G</kbd></td><td>Jump to rung number (prompts for number)</td></tr>
+        <tr><td><kbd>Ctrl+/</kbd></td><td>Toggle keyboard shortcut cheatsheet</td></tr>
+        <tr><td><kbd>?</kbd></td><td>Open this User Guide in a new tab</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Close open dialogs / overlays</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ── Tips ────────────────────────────────────────── -->
+  <section>
+    <h2>&#x1F4A1; Tips &amp; Notes</h2>
+    <ul>
+      <li>An unsaved-change indicator (<strong>*</strong>) appears on the editor tab label whenever there are uncommitted edits.</li>
+      <li>Closing or refreshing the browser tab will prompt you before any unsaved changes are lost.</li>
+      <li>Comparison files (<code>.cmpjson</code>) can be re-opened with <strong>Open</strong> when a Compare tab is active.</li>
+      <li>Right-click any tag member row in the editor to quickly copy its name or current value to clipboard.</li>
+      <li>All processing is local &mdash; nothing is sent over the internet. The app runs entirely on your machine.</li>
+      <li>Use the organizer search box to filter tree nodes by name without fully expanding the tree.</li>
+    </ul>
+  </section>
+
+</div>
+</body>
+</html>
