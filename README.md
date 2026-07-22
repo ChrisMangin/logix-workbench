@@ -1,47 +1,20 @@
 <div align="center">
-  <h1>⚙ Logix Workbench</h1>
-  <p><strong>Studio 5000-style editor &amp; diff tool for Allen-Bradley .L5X files</strong></p>
-  <p>
-    <img src="https://img.shields.io/badge/platform-Windows-blue?logo=windows" alt="Platform">
-    <img src="https://img.shields.io/badge/python-3.10%2B-blue?logo=python" alt="Python">
-    <img src="https://img.shields.io/github/v/release/ChrisMangin/logix-workbench" alt="Release">
-    <img src="https://img.shields.io/github/license/ChrisMangin/logix-workbench" alt="License">
-  </p>
-  <br>
-  <img src="docs/screenshots/home.png" alt="Logix Workbench Home Screen" width="850">
+
+# Logix Workbench
+**Studio 5000-style editor and diff tool for Allen-Bradley `.L5X` files**
+
+[![Platform](https://img.shields.io/badge/platform-Windows-0078D4?style=flat-square&logo=windows)](https://github.com/ChrisMangin/logix-workbench)
+[![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://github.com/ChrisMangin/logix-workbench)
+[![Latest Release](https://img.shields.io/github/v/release/ChrisMangin/logix-workbench?style=flat-square)](https://github.com/ChrisMangin/logix-workbench/releases/latest)
+[![License](https://img.shields.io/github/license/ChrisMangin/logix-workbench?style=flat-square)](LICENSE)
+
+<br>
+<img src="docs/screenshots/home.png" alt="Logix Workbench Home Screen" width="860">
 </div>
 
 ---
 
-Logix Workbench is a **standalone Windows app** (no Studio 5000 required) that lets you open, edit, and diff Rockwell Automation `.L5X` controller export files from any browser — with a clean dark UI, visual ladder diagram rendering, and a full side-by-side comparison engine.
-
-## Features
-
-### Editor
-- **Open any `.L5X` file** via native Windows file picker — no uploading, reads directly from disk
-- **Controller Organizer** sidebar with collapse/expand all — navigate programs, routines, tags, data types, AOIs, I/O, tasks, and trends
-- **Visual Ladder Diagram** — renders rungs as graphical diagrams with click-to-edit; switch to Raw Text mode any time
-- **Tags** — full CRUD for controller and program-scoped tags; drill into UDT/array members and individual DINT bits with live values; right-click to copy name or value
-- **AOI Editor** — tabbed view of Parameters, Local Tags, and Logic with full inline editing
-- **Data Types** — view and edit UDT member tables inline
-- **I/O Configuration**, **Tasks**, and **Trends** panels
-- **Multiple editor tabs** — work on several files at once; `Ctrl+Tab` to cycle
-- **Save** downloads the modified `.L5X` back to disk; unsaved-change indicator on every tab
-
-### Compare
-- **Side-by-side diff** of any two `.L5X` files — tags, routines, AOIs, data types, programs, I/O, and trends
-- **Diff tree** with change counts; filter by name; click any item to render it in A/B panes
-- **Rung-level diff** — detects changed rung content even when rung counts are identical
-- **Find in diff** — search rung text, tag names, routine names across the entire result; navigates and scrolls to the exact rung in the correct panel (A or B)
-- **📋 Copy Diff** — one click copies a plain-text summary of all changes to clipboard
-- Visual / Raw Text toggle for all rung cards without rerunning the comparison
-
-### Quality of Life
-- **Keyboard shortcuts** — `Ctrl+S/O/N/W/F/G/Tab` + `?` + `Ctrl+/` cheatsheet
-- **Recent files** on the home screen with live filter
-- **Jump to rung** (`Ctrl+G`) — prompts for a number and scrolls directly there
-- **User Guide** opens in a separate browser tab (`?` key)
-- Runs 100% locally — nothing is sent over the internet
+Logix Workbench is a **standalone Windows app** (no Studio 5000 license required) that lets you open, edit, and diff Rockwell Automation `.L5X` controller export files directly in your browser - with a clean dark UI, visual ladder diagram rendering, and a full side-by-side comparison engine.
 
 ---
 
@@ -53,7 +26,7 @@ Logix Workbench is a **standalone Windows app** (no Studio 5000 required) that l
   <td><img src="docs/screenshots/editor_empty.png" alt="Editor" width="420"></td>
 </tr>
 <tr>
-  <td align="center"><em>Home screen with feature cards &amp; recent files</em></td>
+  <td align="center"><em>Home screen with feature cards and recent files</em></td>
   <td align="center"><em>Editor with Controller Organizer sidebar</em></td>
 </tr>
 <tr>
@@ -68,19 +41,47 @@ Logix Workbench is a **standalone Windows app** (no Studio 5000 required) that l
 
 ---
 
+## Features
+
+### Editor
+- **Open any `.L5X` file** via native Windows file picker - reads directly from disk, nothing uploaded
+- **Controller Organizer** sidebar with collapse/expand all - navigate programs, routines, tags, data types, AOIs, I/O, tasks, and trends
+- **Visual Ladder Diagram** - renders rungs as graphical diagrams with click-to-edit; switch to Raw Text mode any time
+- **Tags** - full CRUD for controller and program-scoped tags; drill into UDT/array members and individual DINT bits; right-click to copy name or value
+- **AOI Editor** - tabbed view of Parameters, Local Tags, and Logic with full inline editing
+- **Data Types** - view and edit UDT member tables inline
+- **I/O Configuration**, **Tasks**, and **Trends** panels
+- **Multiple editor tabs** - work on several files at once; `Ctrl+Tab` to cycle
+- **Save** downloads the modified `.L5X` back to disk; unsaved-change indicator on every tab
+
+### Compare
+- **Side-by-side diff** of any two `.L5X` files - tags, routines, AOIs, data types, programs, I/O, and trends
+- **Diff tree** with change counts; filter by name; click any item to render it in A/B panes
+- **Rung-level diff** - detects changed rung content even when rung counts are identical
+- **Find in diff** - search rung text, tag names, and routine names; navigates to the exact rung in the correct panel
+- **Copy Diff** - one click copies a plain-text summary of all changes to clipboard
+- Visual / Raw Text toggle for all rung cards without rerunning the comparison
+
+### Quality of Life
+- **Keyboard shortcuts** - `Ctrl+S/O/N/W/F/G/Tab` plus `?` and `Ctrl+/` cheatsheet
+- **Recent files** on the home screen with live filter
+- **Jump to rung** (`Ctrl+G`) - scroll directly to any rung by number
+- **User Guide** opens in a separate browser tab (`?` key)
+- Runs **100% locally** - nothing is sent over the internet
+
+---
+
 ## Quick Start
 
-### Option 1 — Standalone EXE (Windows, no Python needed)
+### Option 1 - Standalone EXE (Windows, no Python needed)
 
 1. Download **`L5XEditor.exe`** from the [latest release](https://github.com/ChrisMangin/logix-workbench/releases/latest)
-2. Double-click it — a browser tab opens automatically at `http://127.0.0.1:8123`
+2. Double-click it - a browser tab opens automatically at `http://127.0.0.1:8123`
 3. Click **+ Editor**, then **Open** to load your `.L5X` file
 
-> Close the console window (or press `Ctrl+C` in it) to stop the server.
+> Close the console window (or press `Ctrl+C`) to stop the server.
 
-### Option 2 — Run from Source
-
-**Requirements:** Python 3.10+
+### Option 2 - Run from Source
 
 **Windows:**
 ```bat
@@ -98,12 +99,12 @@ Both scripts create a virtual environment on first run, install dependencies, an
 ```bash
 cd backend
 python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn main:app --host 127.0.0.1 --port 8123
 ```
 
-### Option 3 — Rebuild the EXE
+### Option 3 - Rebuild the EXE
 
 ```bash
 ./build_exe.sh
@@ -116,12 +117,12 @@ Requires Python 3.10+ with PyInstaller. Produces `dist/L5XEditor.exe` (~30 MB, s
 ## Keyboard Shortcuts
 
 | Shortcut | Action |
-|---|---|
+|----------|--------|
 | `Ctrl+S` | Save file |
 | `Ctrl+O` | Open file |
 | `Ctrl+N` | New file |
 | `Ctrl+W` | Close current tab |
-| `Ctrl+F` | Focus find / search box |
+| `Ctrl+F` | Focus search box |
 | `Ctrl+Tab` | Next tab |
 | `Ctrl+Shift+Tab` | Previous tab |
 | `Ctrl+G` | Jump to rung number |
@@ -135,35 +136,33 @@ Requires Python 3.10+ with PyInstaller. Produces `dist/L5XEditor.exe` (~30 MB, s
 
 ```
 logix-workbench/
-├── backend/
-│   ├── main.py             FastAPI REST API + serves the frontend
-│   ├── l5x_handler.py      Core L5X XML engine (lxml-based)
-│   ├── launcher.py         EXE entry point (starts server + opens browser)
-│   └── requirements.txt
-├── frontend/
-│   ├── index.html
-│   ├── style.css
-│   ├── app.js              UI logic (~5000 lines, no build step)
-│   ├── ladder.js           Visual ladder diagram renderer
-│   └── guide.html          Standalone user guide page
-├── docs/
-│   └── screenshots/
-├── dist/
-│   └── L5XEditor.exe       Prebuilt Windows executable
-├── build_exe.sh            Rebuild the EXE via PyInstaller
-├── run.bat                 One-click launcher (Windows)
-└── run.sh                  One-click launcher (macOS/Linux)
++-- backend/
+|   +-- main.py              FastAPI REST API + serves the frontend
+|   +-- l5x_handler.py       Core L5X XML engine (lxml-based)
+|   +-- launcher.py          EXE entry point (starts server + opens browser)
+|   +-- requirements.txt
++-- frontend/
+|   +-- index.html
+|   +-- style.css
+|   +-- app.js               UI logic (~5000 lines, no build step)
+|   +-- ladder.js            Visual ladder diagram renderer
+|   +-- guide.html           Standalone user guide page
++-- docs/
+|   +-- screenshots/
++-- build_exe.sh             Rebuild the EXE via PyInstaller
++-- run.bat                  One-click launcher (Windows)
++-- run.sh                   One-click launcher (macOS / Linux)
 ```
 
 ---
 
 ## Tech Stack
 
-| Layer | Tech |
-|---|---|
+| Layer | Technology |
+|-------|-----------|
 | Backend | Python 3.10+, FastAPI, uvicorn |
 | XML parsing | lxml |
-| Frontend | Vanilla HTML/CSS/JS — no framework, no build step |
+| Frontend | Vanilla HTML / CSS / JS - no framework, no build step |
 | Packaging | PyInstaller (single-file EXE) |
 | System tray | pystray + Pillow |
 
@@ -171,4 +170,4 @@ logix-workbench/
 
 ## License
 
-MIT — see [LICENSE](LICENSE)
+MIT - see [LICENSE](LICENSE).
