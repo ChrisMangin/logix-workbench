@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Logix Workbench</title>
+<link rel="stylesheet" href="style.css?v=20260721_11">
+</head>
+<body>
+<div id="root">
+  <!-- PROGRESS BAR -->
+  <div id="progressBar"><div id="progressFill"></div></div>
+
+  <!-- TOOLBAR -->
+  <header id="toolbar">
+    <span class="logo">Logix Workbench</span>
+    <div class="tbGroup">
+      <button id="btnNew"      title="New Project">New</button>
+      <label id="openLabel" class="tbFile"   title="Open .L5X file"><span id="openLabelTxt">Open</span>
+        <input type="file" id="fileInput" accept=".l5x,.xml" hidden>
+      </label>
+      <button id="btnSave"     disabled title="Download .L5X">Save</button>
+      <button id="btnValidate" disabled title="Validate structure">Validate</button>
+      <button id="btnClose"    disabled title="Close file and return to home">Close</button>
+    </div>
+    <div class="tbGroup tbFind">
+      <input id="findInput" placeholder="🔎 Find tag / instruction / routine…" autocomplete="off">
+      <button id="btnFind" title="Find &amp; Cross-Reference">Find</button>
+    </div>
+    <span id="docName" class="docName"></span>
+  </header>
+
+  <!-- TAB BAR -->
+  <div id="tabBar"></div>
+
+  <!-- BODY -->
+  <div id="workspace">
+    <!-- LEFT: Controller Organizer -->
+    <aside id="organizer">
+      <div id="orgHeader">
+        <span>Controller Organizer</span>
+      </div>
+      <div id="orgSearch">
+        <input id="treeSearch" placeholder="🔍  Search…" autocomplete="off">
+      </div>
+      <div id="orgTree"></div>
+    </aside>
+
+    <!-- RESIZE HANDLE -->
+    <div id="resizer"></div>
+
+    <!-- RIGHT: Detail / Content pane -->
+    <main id="content">
+      <!-- Welcome screen is rendered by _renderWelcome() in app.js -->
+    </main>
+    <!-- COMPARE OVERLAY -->
+    <div id="cmpOverlay" class="hidden"></div>
+  </div>
+
+  <!-- VALIDATION FOOTER (shown after Validate, hidden by default) -->
+  <div id="valFooter" class="hidden"></div>
+
+  <!-- STATUS BAR -->
+  <footer id="statusBar">
+    <span id="statusText">Ready</span>
+    <span id="modifiedFlag" class="hidden">● Modified</span>
+  </footer>
+</div>
+
+<!-- NEW PROJECT DIALOG -->
+<dialog id="dlgNew">
+  <h3>New Controller Project</h3>
+  <label>Controller Name<input id="npName" value="MyController"></label>
+  <label>Processor Type
+    <select id="npProcessor">
+      <option>1756-L83E</option><option>1756-L84E</option>
+      <option>1769-L33ER</option><option>1769-L36ERM</option>
+      <option>5069-L306ER</option><option>1756-L82E</option>
+    </select>
+  </label>
+  <label>Major Rev<input id="npMajor" value="32"></label>
+  <label>Minor Rev<input id="npMinor" value="11"></label>
+  <div class="dlgBtns">
+    <button id="npCancel">Cancel</button>
+    <button id="npCreate" class="primary">Create</button>
+  </div>
+</dialog>
+
+<div id="toast"></div>
+<script src="ladder.js?v=20260721_11"></script>
+<script src="app.js?v=20260721_11"></script>
+</body>
+</html>
