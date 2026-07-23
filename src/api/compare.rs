@@ -1,11 +1,12 @@
-use axum::{extract::{Form, State}, response::{IntoResponse, Response}, Json};
-use serde::Deserialize;
-use axum::extract::Multipart;
+use axum::{extract::{State, Multipart}, response::{IntoResponse, Response}, Json};
 use base64::Engine;
 use serde_json::json;
 use std::sync::Arc;
 use super::err400;
 use crate::{state::AppState, l5x};
+use crate::api::project::parse_mp;
+
+// ─── compare two uploaded files ──────────────────────────────────────────────
 
 pub async fn compare_upload(State(st): State<Arc<AppState>>, mut mp: Multipart) -> Response {
     let mut bytes_a: Option<Vec<u8>> = None;
@@ -27,27 +28,28 @@ pub async fn compare_upload(State(st): State<Arc<AppState>>, mut mp: Multipart) 
     match result { Ok(v) => Json(v).into_response(), Err(e) => err400(e) }
 }
 
-#[derive(Deserialize)]
-pub struct CmpPathsForm {
-    #[serde(rename = "pathA")] pub path_a: String,
-    #[serde(rename = "pathB")] pub path_b: String,
-    pub include_comments: Option<String>,
-    pub include_values:   Option<String>,
-}
+// ─── compare by filesystem path ──────────────────────────────────────────────
+// Frontend sends FormData (multipart) — must use Multipart extractor, not Form<T>.
 
-pub async fn compare_paths(State(st): State<Arc<AppState>>, Form(f): Form<CmpPathsForm>) -> Response {
-    let pa = f.path_a.trim().to_string();
-    let pb = f.path_b.trim().to_string();
+pub async fn compare_paths(State(st): State<Arc<AppState>>, mp: Multipart) -> Response {
+    let fields = parse_mp(mp).await;
+    let pa = fields.get("pathA").map(|s| s.trim().to_string()).unwrap_or_default();
+    let pb = fields.get("pathB").map(|s| s.trim().to_string()).unwrap_or_default();
+    let inc_cmt  = fields.get("include_comments").map(|s| s.to_lowercase() == "true").unwrap_or(false);
+    let inc_vals = fields.get("include_values").map(|s| s.to_lowercase() == "true").unwrap_or(false);
+
+    if pa.is_empty() || pb.is_empty() { return err400(anyhow::anyhow!("pathA and pathB required")); }
     if !std::path::Path::new(&pa).is_file() { return err400(anyhow::anyhow!("File not found: {pa}")); }
     if !std::path::Path::new(&pb).is_file() { return err400(anyhow::anyhow!("File not found: {pb}")); }
+
     let ba = match std::fs::read(&pa) { Ok(b) => b, Err(e) => return err400(anyhow::anyhow!("{e}")) };
     let bb = match std::fs::read(&pb) { Ok(b) => b, Err(e) => return err400(anyhow::anyhow!("{e}")) };
-    let inc_cmt  = f.include_comments.as_deref().map(|s| s.to_lowercase() == "true").unwrap_or(false);
-    let inc_vals = f.include_values.as_deref().map(|s| s.to_lowercase() == "true").unwrap_or(false);
     let result = l5x::diff::compare_l5x(&ba, &bb, inc_cmt, inc_vals);
     { let mut cmp = st.cmp.lock().unwrap(); cmp.set_paths(ba, bb, Some(pa), Some(pb)); }
     match result { Ok(v) => Json(v).into_response(), Err(e) => err400(e) }
 }
+
+// ─── migrate + compare (file upload) ─────────────────────────────────────────
 
 pub async fn migrate_and_compare(State(st): State<Arc<AppState>>, mut mp: Multipart) -> Response {
     let mut bytes_a: Option<Vec<u8>> = None;
@@ -72,36 +74,35 @@ pub async fn migrate_and_compare(State(st): State<Arc<AppState>>, mut mp: Multip
     do_migrate(ba, bb, &direction, &change_type, &name, &program, inc_cmt, inc_vals, None, None, Arc::clone(&st)).await
 }
 
-#[derive(Deserialize)]
-pub struct MigrateCachedForm {
-    pub direction:        String,
-    pub change_type:      String,
-    pub name:             String,
-    pub program:          Option<String>,
-    pub include_comments: Option<String>,
-    pub include_values:   Option<String>,
-}
+// ─── migrate + compare (cached paths) ────────────────────────────────────────
+// Frontend sends FormData (multipart) — must use Multipart extractor, not Form<T>.
 
-pub async fn migrate_cached(State(st): State<Arc<AppState>>, Form(f): Form<MigrateCachedForm>) -> Response {
-    let (ba, bb, pa, pb) = {
+pub async fn migrate_cached(State(st): State<Arc<AppState>>, mp: Multipart) -> Response {
+    let fields = parse_mp(mp).await;
+    let direction   = fields.get("direction").cloned().unwrap_or_default();
+    let change_type = fields.get("change_type").cloned().unwrap_or_default();
+    let name        = fields.get("name").cloned().unwrap_or_default();
+    let program     = fields.get("program").cloned().unwrap_or_default();
+    let inc_cmt     = fields.get("include_comments").map(|s| s.to_lowercase() == "true").unwrap_or(false);
+    let inc_vals    = fields.get("include_values").map(|s| s.to_lowercase() == "true").unwrap_or(false);
+
+    let (ba, bb, path_a, path_b) = {
         let cmp = st.cmp.lock().unwrap();
         match (&cmp.bytes_a, &cmp.bytes_b) {
             (Some(a), Some(b)) => (a.clone(), b.clone(), cmp.path_a.clone(), cmp.path_b.clone()),
             _ => return err400(anyhow::anyhow!("No cached comparison — run a path-based compare first")),
         }
     };
-    let inc_cmt  = f.include_comments.as_deref().map(|s| s.to_lowercase() == "true").unwrap_or(false);
-    let inc_vals = f.include_values.as_deref().map(|s| s.to_lowercase() == "true").unwrap_or(false);
-    do_migrate(ba, bb, &f.direction, &f.change_type, &f.name, f.program.as_deref().unwrap_or(""), inc_cmt, inc_vals, pa, pb, Arc::clone(&st)).await
+    do_migrate(ba, bb, &direction, &change_type, &name, &program, inc_cmt, inc_vals, path_a, path_b, Arc::clone(&st)).await
 }
 
 async fn do_migrate(ba: Vec<u8>, bb: Vec<u8>, direction: &str, change_type: &str, name: &str, program: &str,
                     inc_cmt: bool, inc_vals: bool, path_a: Option<String>, path_b: Option<String>,
                     st: Arc<AppState>) -> Response {
     let prog = if program.is_empty() { None } else { Some(program) };
-    let direction = direction.to_string();
+    let direction   = direction.to_string();
     let change_type = change_type.to_string();
-    let name = name.to_string();
+    let name        = name.to_string();
     let result: anyhow::Result<Response> = (|| {
         let mut root_a = l5x::parse(&ba)?;
         let mut root_b = l5x::parse(&bb)?;
