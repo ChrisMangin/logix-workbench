@@ -102,13 +102,15 @@
     <ul>
       <li>Click <strong>+ Compare</strong>, select <strong>File A</strong> (baseline) and <strong>File B</strong> (revised), then click <strong>Compare &#x21c4;</strong>.</li>
       <li>The left panel shows a <strong>diff tree</strong> of every change. Use the filter box to search by name. Click any item to render it side-by-side in File A and File B panes.</li>
+      <li><strong>Rung diff count</strong> &mdash; The number next to each routine (e.g. <em>3 rung diff</em>) is the number of <strong>logical rung changes</strong>: each <em>changed</em>, <em>added</em>, or <em>removed</em> rung counts as one. In the side-by-side panes, a single changed rung is highlighted in <strong>both</strong> the A and B columns &mdash; that is one change shown from two angles, not two separate changes.</li>
       <li><strong>Find</strong> (&#x1F50D; icon / toolbar search) in compare mode searches rung text, tag names, routine names, data type names, and AOI names across the entire diff.</li>
       <li>When a find result is selected, the tool navigates to the correct routine and <strong>scrolls to the exact rung</strong> in the A or B pane where the match was found.</li>
       <li>Click <strong>&#x1F4CB; Copy Diff</strong> in the Changes header to copy a plain-text summary of all changes to the clipboard.</li>
       <li>Options: <em>Comments</em> includes rung comments in the diff. <em>Tag Values</em> includes initial tag values.</li>
       <li>Visual / Raw Text toggle switches all rung cards between diagram and text modes without rerunning the comparison.</li>
+      <li><strong>Migrate</strong> &mdash; &#x2192;B / &#x2190;A buttons on each tree item copy that item from one file to the other and re-run the comparison automatically.</li>
     </ul>
-    <div class="tip"><strong>Tip:</strong> The diff detects changes in rung <em>content</em> even when rung count is identical &mdash; catches edits that only changed rung text or instructions.</div>
+    <div class="tip"><strong>Tip:</strong> The diff detects changes in rung <em>content</em> even when the rung count is identical &mdash; catches edits that only changed rung text or instructions.</div>
   </section>
 
   <!-- ── Keyboard Shortcuts ──────────────────────────── -->
