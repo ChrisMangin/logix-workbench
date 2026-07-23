@@ -1556,7 +1556,7 @@ def compare_l5x(root_a: etree._Element, root_b: etree._Element,
             keys_b = [r[0] for r in rungs_b]
         if keys_a == keys_b:
             return []  # Quick bail — identical content
-        sm = difflib.SequenceMatcher(None, keys_a, keys_b, autojunk=True)
+        sm = difflib.SequenceMatcher(None, keys_a, keys_b, autojunk=False)
         result = []
         for op, i1, i2, j1, j2 in sm.get_opcodes():
             if op == "equal":
@@ -1652,8 +1652,13 @@ def compare_l5x(root_a: etree._Element, root_b: etree._Element,
     # ── modules (I/O) ─────────────────────────────────────────────────────
     def get_modules(root):
         mods = {}
+        seen_ids = set()
         for m in (root.findall("./Controller/EthernetNetwork/Module")
                   + root.findall("./Controller/Modules/Module")):
+            mid = id(m)
+            if mid in seen_ids:
+                continue
+            seen_ids.add(mid)
             name = m.get("Name","")
             mods[name] = {"catalog": m.get("CatalogNumber",""), "slot": m.get("Slot","")}
         return mods
