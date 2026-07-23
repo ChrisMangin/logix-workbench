@@ -59,16 +59,50 @@ async fn load_bytes(State(st): State<Arc<AppState>>, data: &[u8], name: &str) ->
 #[derive(Deserialize)]
 pub struct TitleForm { pub title: Option<String> }
 
+/// Show a native Windows file-open dialog.
+///
+/// `rfd::AsyncFileDialog` fails silently when the process runs as a Windows GUI subsystem
+/// app (windows_subsystem = "windows") with no Win32 message loop on the main thread —
+/// IFileOpenDialog is created but messages are never dispatched, so Show() returns
+/// immediately without rendering.
+///
+/// Fix: spawn a hidden PowerShell process that uses .NET's OpenFileDialog, which creates
+/// its own message loop internally. Works on every Windows 10/11 machine, no extra deps.
 pub async fn api_pick_file(Form(f): Form<TitleForm>) -> Response {
-    let title = f.title.as_deref().unwrap_or("Open L5X File");
-    let path = rfd::AsyncFileDialog::new()
-        .add_filter("L5X Files", &["l5x", "L5X"])
-        .set_title(title)
-        .pick_file()
+    let title = f.title.as_deref().unwrap_or("Open L5X File").to_string();
+    let path = tokio::task::spawn_blocking(move || pick_file_ps(&title))
         .await
-        .map(|h| h.path().to_string_lossy().to_string())
         .unwrap_or_default();
     Json(json!({"path": path})).into_response()
+}
+
+/// Invoke OpenFileDialog via PowerShell + System.Windows.Forms.
+/// Returns the selected path, or empty string if cancelled.
+fn pick_file_ps(title: &str) -> String {
+    // Escape single-quotes in the title (PowerShell string literal)
+    let safe_title = title.replace('\'', "''");
+
+    let script = format!(
+        "Add-Type -AssemblyName System.Windows.Forms; \
+         $d = New-Object System.Windows.Forms.OpenFileDialog; \
+         $d.Title = '{safe_title}'; \
+         $d.Filter = 'L5X Files (*.l5x;*.L5X)|*.l5x;*.L5X|All Files (*.*)|*.*'; \
+         $d.Multiselect = $false; \
+         $r = $d.ShowDialog(); \
+         if ($r -eq [System.Windows.Forms.DialogResult]::OK) {{ Write-Output $d.FileName }}"
+    );
+
+    std::process::Command::new("powershell.exe")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-WindowStyle", "Hidden",
+            "-Command", &script,
+        ])
+        .output()
+        .ok()
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .unwrap_or_default()
 }
 
 pub async fn api_summary(State(st): State<Arc<AppState>>) -> Response {
