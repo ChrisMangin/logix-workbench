@@ -1,11 +1,11 @@
 use axum::{
-    extract::{Multipart, Form, State},
+    extract::{Multipart, State},
     response::{IntoResponse, Response},
     Json,
 };
-use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
+use std::collections::HashMap;
 use super::err400;
 use crate::{state::AppState, l5x};
 
@@ -35,11 +35,12 @@ pub async fn api_open(State(st): State<Arc<AppState>>, mut mp: Multipart) -> Res
     err400(anyhow::anyhow!("No file field"))
 }
 
-#[derive(Deserialize)]
-pub struct PathForm { pub path: String }
-
-pub async fn api_open_path(State(st): State<Arc<AppState>>, Form(f): Form<PathForm>) -> Response {
-    let path = f.path.trim().to_string();
+/// The browser sends FormData (multipart), NOT application/x-www-form-urlencoded,
+/// so we use Multipart instead of Form<T> here (and everywhere the frontend uses FormData).
+pub async fn api_open_path(State(st): State<Arc<AppState>>, mp: Multipart) -> Response {
+    let fields = parse_mp(mp).await;
+    let path = fields.get("path").map(|s| s.trim().to_string()).unwrap_or_default();
+    if path.is_empty() { return err400(anyhow::anyhow!("path required")); }
     if !std::path::Path::new(&path).is_file() { return err400(anyhow::anyhow!("File not found: {path}")); }
     let data = match std::fs::read(&path) { Ok(d) => d, Err(e) => return err400(anyhow::anyhow!("{e}")) };
     let base = std::path::Path::new(&path).file_stem().and_then(|s| s.to_str()).unwrap_or("project").to_string();
@@ -56,46 +57,69 @@ async fn load_bytes(State(st): State<Arc<AppState>>, data: &[u8], name: &str) ->
     match result { Ok(v) => Json(v).into_response(), Err(e) => err400(e) }
 }
 
-#[derive(Deserialize)]
-pub struct TitleForm { pub title: Option<String> }
-
 /// Show a native Windows file-open dialog.
 ///
-/// `rfd::AsyncFileDialog` fails silently when the process runs as a Windows GUI subsystem
-/// app (windows_subsystem = "windows") with no Win32 message loop on the main thread —
-/// IFileOpenDialog is created but messages are never dispatched, so Show() returns
-/// immediately without rendering.
+/// Root cause of the original "does nothing" bug: axum's Form<T> extractor only handles
+/// application/x-www-form-urlencoded; the browser's fetch(FormData) sends multipart/form-data,
+/// which axum rejects with 415. The JS got back no `path` field → silent no-op.
 ///
-/// Fix: spawn a hidden PowerShell process that uses .NET's OpenFileDialog, which creates
-/// its own message loop internally. Works on every Windows 10/11 machine, no extra deps.
-pub async fn api_pick_file(Form(f): Form<TitleForm>) -> Response {
-    let title = f.title.as_deref().unwrap_or("Open L5X File").to_string();
+/// Second bug: rfd::AsyncFileDialog fails on windows_subsystem="windows" processes because
+/// there's no Win32 message loop on any thread to dispatch messages to IFileOpenDialog.
+///
+/// Fix: parse with Multipart, then spawn a hidden PowerShell process that uses
+/// System.Windows.Forms.OpenFileDialog — creates its own message loop, always works.
+pub async fn api_pick_file(mp: Multipart) -> Response {
+    let fields = parse_mp(mp).await;
+    let title = fields.get("title")
+        .filter(|s| !s.is_empty())
+        .map(|s| s.clone())
+        .unwrap_or_else(|| "Open L5X File".to_string());
+
     let path = tokio::task::spawn_blocking(move || pick_file_ps(&title))
         .await
         .unwrap_or_default();
     Json(json!({"path": path})).into_response()
 }
 
-/// Invoke OpenFileDialog via PowerShell + System.Windows.Forms.
+/// Drain a multipart body into a String→String map.
+/// Used wherever the frontend sends FormData (multipart) but we only need text fields.
+pub async fn parse_mp(mut mp: Multipart) -> HashMap<String, String> {
+    let mut map = HashMap::new();
+    while let Ok(Some(field)) = mp.next_field().await {
+        let name = field.name().unwrap_or("").to_string();
+        if let Ok(text) = field.text().await {
+            map.insert(name, text);
+        }
+    }
+    map
+}
+
+/// Spawn a hidden PowerShell process that shows a Windows OpenFileDialog.
 /// Returns the selected path, or empty string if cancelled.
 fn pick_file_ps(title: &str) -> String {
-    // Escape single-quotes in the title (PowerShell string literal)
+    // Escape single-quotes for the PowerShell string literal
     let safe_title = title.replace('\'', "''");
 
+    // Use a hidden TopMost form as parent so the dialog appears above the browser window
     let script = format!(
         "Add-Type -AssemblyName System.Windows.Forms; \
+         [System.Windows.Forms.Application]::EnableVisualStyles(); \
+         $f = New-Object System.Windows.Forms.Form; \
+         $f.TopMost = $true; \
+         $f.WindowState = [System.Windows.Forms.FormWindowState]::Minimized; \
+         $f.Show(); \
          $d = New-Object System.Windows.Forms.OpenFileDialog; \
          $d.Title = '{safe_title}'; \
          $d.Filter = 'L5X Files (*.l5x;*.L5X)|*.l5x;*.L5X|All Files (*.*)|*.*'; \
          $d.Multiselect = $false; \
-         $r = $d.ShowDialog(); \
+         $r = $d.ShowDialog($f); \
+         $f.Dispose(); \
          if ($r -eq [System.Windows.Forms.DialogResult]::OK) {{ Write-Output $d.FileName }}"
     );
 
     std::process::Command::new("powershell.exe")
         .args([
             "-NoProfile",
-            "-NonInteractive",
             "-WindowStyle", "Hidden",
             "-Command", &script,
         ])
