@@ -1,0 +1,34 @@
+[package]
+name = "logix-workbench"
+version = "1.1.0"
+edition = "2021"
+authors = ["Chris Mangin"]
+
+[[bin]]
+name = "L5XEditor"
+path = "src/main.rs"
+
+[dependencies]
+axum          = { version = "0.7", features = ["multipart"] }
+tokio         = { version = "1",   features = ["full"] }
+tower         = "0.4"
+tower-http    = { version = "0.5", features = ["cors"] }
+serde         = { version = "1",   features = ["derive"] }
+serde_json    = "1"
+roxmltree     = "0.19"
+xmltree       = "0.10"
+rust-embed    = "8"
+rfd           = "0.14"
+sha1          = { version = "0.10", features = ["std"] }
+base64        = "0.22"
+similar       = "2"
+anyhow        = "1"
+hex           = "0.4"
+open          = "5"
+
+[profile.release]
+opt-level     = 3
+lto           = "fat"
+codegen-units = 1
+strip         = true
+panic         = "abort"
