@@ -35,8 +35,7 @@ pub async fn api_open(State(st): State<Arc<AppState>>, mut mp: Multipart) -> Res
     err400(anyhow::anyhow!("No file field"))
 }
 
-/// The browser sends FormData (multipart), NOT application/x-www-form-urlencoded,
-/// so we use Multipart instead of Form<T> here (and everywhere the frontend uses FormData).
+/// Frontend sends FormData (multipart) — use Multipart extractor, not Form<T>.
 pub async fn api_open_path(State(st): State<Arc<AppState>>, mp: Multipart) -> Response {
     let fields = parse_mp(mp).await;
     let path = fields.get("path").map(|s| s.trim().to_string()).unwrap_or_default();
@@ -57,76 +56,135 @@ async fn load_bytes(State(st): State<Arc<AppState>>, data: &[u8], name: &str) ->
     match result { Ok(v) => Json(v).into_response(), Err(e) => err400(e) }
 }
 
-/// Show a native Windows file-open dialog.
+/// Show a native Windows file-open dialog using IFileOpenDialog (COM).
 ///
-/// Root cause of the original "does nothing" bug: axum's Form<T> extractor only handles
-/// application/x-www-form-urlencoded; the browser's fetch(FormData) sends multipart/form-data,
-/// which axum rejects with 415. The JS got back no `path` field → silent no-op.
+/// Previous approach (PowerShell subprocess) caused visible console window flashes even with
+/// -WindowStyle Hidden, because Windows briefly shows the process before applying the style.
 ///
-/// Second bug: rfd::AsyncFileDialog fails on windows_subsystem="windows" processes because
-/// there's no Win32 message loop on any thread to dispatch messages to IFileOpenDialog.
-///
-/// Fix: parse with Multipart, then spawn a hidden PowerShell process that uses
-/// System.Windows.Forms.OpenFileDialog — creates its own message loop, always works.
+/// This implementation calls IFileOpenDialog directly via the `windows` crate:
+///   - No subprocess spawned → no window flash
+///   - COM initialized as STA on the spawn_blocking thread
+///   - Show() internally runs its own message loop, so no pump setup needed
+///   - Appears in front via FOS_FORCEFILESYSTEM | IFileDialog::SetOptions
 pub async fn api_pick_file(mp: Multipart) -> Response {
     let fields = parse_mp(mp).await;
     let title = fields.get("title")
         .filter(|s| !s.is_empty())
-        .map(|s| s.clone())
+        .cloned()
         .unwrap_or_else(|| "Open L5X File".to_string());
 
-    let path = tokio::task::spawn_blocking(move || pick_file_ps(&title))
+    let path = tokio::task::spawn_blocking(move || pick_file_native(&title))
         .await
         .unwrap_or_default();
     Json(json!({"path": path})).into_response()
 }
 
-/// Drain a multipart body into a String→String map.
-/// Used wherever the frontend sends FormData (multipart) but we only need text fields.
+/// Drain a multipart body into a name→value map (text fields only).
 pub async fn parse_mp(mut mp: Multipart) -> HashMap<String, String> {
     let mut map = HashMap::new();
     while let Ok(Some(field)) = mp.next_field().await {
         let name = field.name().unwrap_or("").to_string();
-        if let Ok(text) = field.text().await {
-            map.insert(name, text);
-        }
+        if let Ok(text) = field.text().await { map.insert(name, text); }
     }
     map
 }
 
-/// Spawn a hidden PowerShell process that shows a Windows OpenFileDialog.
-/// Returns the selected path, or empty string if cancelled.
-fn pick_file_ps(title: &str) -> String {
-    // Escape single-quotes for the PowerShell string literal
-    let safe_title = title.replace('\'', "''");
+/// Show a native IFileOpenDialog via Windows COM.
+/// Runs on a dedicated blocking thread; no subprocess, no window flash.
+fn pick_file_native(title: &str) -> String {
+    #[cfg(target_os = "windows")]
+    {
+        use windows::{
+            Win32::{
+                System::Com::{
+                    CoCreateInstance, CoInitializeEx, CoUninitialize, CoTaskMemFree,
+                    CLSCTX_INPROC_SERVER, COINIT_APARTMENTTHREADED, COINIT_DISABLE_OLE1DDE,
+                },
+                UI::Shell::{
+                    Common::COMDLG_FILTERSPEC,
+                    FileOpenDialog, IFileOpenDialog, SIGDN_FILESYSPATH,
+                },
+            },
+            core::PCWSTR,
+        };
 
-    // Use a hidden TopMost form as parent so the dialog appears above the browser window
-    let script = format!(
-        "Add-Type -AssemblyName System.Windows.Forms; \
-         [System.Windows.Forms.Application]::EnableVisualStyles(); \
-         $f = New-Object System.Windows.Forms.Form; \
-         $f.TopMost = $true; \
-         $f.WindowState = [System.Windows.Forms.FormWindowState]::Minimized; \
-         $f.Show(); \
-         $d = New-Object System.Windows.Forms.OpenFileDialog; \
-         $d.Title = '{safe_title}'; \
-         $d.Filter = 'L5X Files (*.l5x;*.L5X)|*.l5x;*.L5X|All Files (*.*)|*.*'; \
-         $d.Multiselect = $false; \
-         $r = $d.ShowDialog($f); \
-         $f.Dispose(); \
-         if ($r -eq [System.Windows.Forms.DialogResult]::OK) {{ Write-Output $d.FileName }}"
-    );
+        unsafe {
+            // Initialize COM as STA on this thread (required for IFileOpenDialog)
+            let hr = CoInitializeEx(None, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+            // S_OK (0) = we initialized; S_FALSE (1) = already initialized; both are success
+            let we_initialized = hr.0 == 0;
 
-    std::process::Command::new("powershell.exe")
-        .args([
-            "-NoProfile",
-            "-WindowStyle", "Hidden",
-            "-Command", &script,
-        ])
-        .output()
-        .ok()
-        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-        .unwrap_or_default()
+            let result = pick_file_com(title);
+
+            if we_initialized { CoUninitialize(); }
+
+            result
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    { String::new() }
+}
+
+#[cfg(target_os = "windows")]
+unsafe fn pick_file_com(title: &str) -> String {
+    use windows::{
+        Win32::{
+            System::Com::{CoCreateInstance, CoTaskMemFree, CLSCTX_INPROC_SERVER},
+            UI::Shell::{
+                Common::COMDLG_FILTERSPEC,
+                FileOpenDialog, IFileOpenDialog, SIGDN_FILESYSPATH,
+            },
+        },
+        core::PCWSTR,
+    };
+
+    // Create the file open dialog COM object
+    let dialog: IFileOpenDialog = match CoCreateInstance(&FileOpenDialog, None, CLSCTX_INPROC_SERVER) {
+        Ok(d) => d,
+        Err(_) => return String::new(),
+    };
+
+    // Set dialog title
+    let title_w: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
+    let _ = dialog.SetTitle(PCWSTR::from_raw(title_w.as_ptr()));
+
+    // Set file type filter — keep wide strings alive until after SetFileTypes returns
+    let name_w: Vec<u16> = "L5X Files (*.l5x)\0".encode_utf16().collect();
+    let spec_w: Vec<u16> = "*.l5x;*.L5X\0".encode_utf16().collect();
+    let filters = [COMDLG_FILTERSPEC {
+        pszName: PCWSTR::from_raw(name_w.as_ptr()),
+        pszSpec: PCWSTR::from_raw(spec_w.as_ptr()),
+    }];
+    let _ = dialog.SetFileTypes(&filters);
+    let _ = dialog.SetFileTypeIndex(1);
+
+    // Show the dialog — blocks until the user picks a file or cancels.
+    // IFileOpenDialog::Show() runs its own Win32 message loop internally, so no pump needed.
+    // Returns Err if the user cancelled (HRESULT ERROR_CANCELLED).
+    if dialog.Show(None).is_err() {
+        return String::new();
+    }
+
+    // Retrieve selected item
+    let item = match dialog.GetResult() {
+        Ok(i) => i,
+        Err(_) => return String::new(),
+    };
+
+    // Get filesystem path from the selected item
+    let pwstr = match item.GetDisplayName(SIGDN_FILESYSPATH) {
+        Ok(p) => p,
+        Err(_) => return String::new(),
+    };
+
+    // Convert PWSTR (null-terminated UTF-16) to Rust String, then free COM-allocated memory
+    let ptr = pwstr.0;
+    let len = (0..).take_while(|&i| *ptr.add(i) != 0).count();
+    let path = String::from_utf16_lossy(std::slice::from_raw_parts(ptr, len));
+    CoTaskMemFree(Some(ptr as *const _));
+
+    path.to_string()
 }
 
 pub async fn api_summary(State(st): State<Arc<AppState>>) -> Response {
