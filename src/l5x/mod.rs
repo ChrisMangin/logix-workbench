@@ -15,15 +15,200 @@ pub fn parse(bytes: &[u8]) -> Result<Element> {
 }
 
 pub fn to_xml_string(root: &Element) -> String {
-    let mut out: Vec<u8> = Vec::new();
-    // Add XML declaration manually
-    out.extend_from_slice(b"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n");
-    let cfg = xmltree::EmitterConfig::new()
-        .perform_indent(true)
-        .indent_string("  ")
-        .write_document_declaration(false); // we already wrote it above
-    let _ = root.write_with_config(&mut out, cfg);
-    String::from_utf8(out).unwrap_or_default()
+    // Studio 5000 layout, learned the hard way from real L5X work:
+    // the stock xmltree emitter re-indents everything, drops the BOM,
+    // writes LF line endings, and loses CDATA, and Studio 5000 then
+    // truncates multi-line comments on import. So this writes the file
+    // the way Studio 5000 itself does:
+    //   - UTF-8 BOM, then the XML declaration, then CRLF throughout
+    //   - no indentation (every element starts at column 0)
+    //   - Text / Comment / Data / DefaultData / Description content is
+    //     written back as CDATA on its own lines, exactly as Studio does:
+    //       <Comment>\r\n<![CDATA[...]]>\r\n</Comment>
+    //     xmltree's parser turns CDATA into plain Text nodes on read
+    //     (xmltree 0.10 lib.rs, CData -> Text), so the writer has to
+    //     put CDATA back for those element names, and for any node that
+    //     is still a CData node (new rungs/tags created by write.rs).
+    //   - attributes stay in insertion order (xmltree "attribute-order"
+    //     feature, IndexMap instead of HashMap), so a save does not
+    //     shuffle them.
+    //   - short single-text children (e.g. <ConfigID>100</ConfigID>)
+    //     stay inline, and an element whose children are all such
+    //     short-text elements (e.g. <public>) stays on one line, as in
+    //     the original export.
+    // Line endings inside CDATA are normalised to CRLF: XML parsers
+    // normalise \r\n to \n on read, so the parsed text has LF only.
+    let mut out = String::new();
+    out.push('\u{FEFF}');
+    out.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n");
+    write_element(&mut out, root);
+    out
+}
+
+/// Element names whose text content Studio 5000 stores as CDATA.
+const CDATA_ELEMENTS: [&str; 5] = ["Text", "Comment", "Data", "DefaultData", "Description"];
+
+fn escape_text(s: &str) -> String {
+    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+}
+
+fn escape_attr(s: &str) -> String {
+    escape_text(s).replace('"', "&quot;")
+}
+
+fn to_crlf(s: &str) -> String {
+    s.replace("\r\n", "\n").replace('\n', "\r\n")
+}
+
+/// Children that carry content: element nodes, CData, non-whitespace text,
+/// comments and processing instructions. Whitespace-only text between
+/// elements is layout from the source file, not content, and is dropped
+/// (the writer lays the file out itself).
+fn significant_children(el: &Element) -> Vec<&XMLNode> {
+    el.children
+        .iter()
+        .filter(|n| match n {
+            XMLNode::Text(t) => !t.trim().is_empty(),
+            _ => true,
+        })
+        .collect()
+}
+
+fn open_tag(el: &Element) -> String {
+    let mut s = String::from("<");
+    s.push_str(&el.name);
+    for (k, v) in &el.attributes {
+        s.push(' ');
+        s.push_str(k);
+        s.push_str("=\"");
+        s.push_str(&escape_attr(v));
+        s.push('"');
+    }
+    s
+}
+
+/// True when the element can be written on one line: a single short text
+/// child with no line breaks, e.g. <ConfigID>100</ConfigID>.
+fn inline_text(el: &Element) -> Option<String> {
+    // CDATA elements are never inline text: their content is written
+    // back as a CDATA block, even when it is a single line. Without
+    // this, a Rung (whose children are Comment and Text) would match
+    // the all-inline-children rule below and be written on one line.
+    if CDATA_ELEMENTS.contains(&el.name.as_str()) {
+        return None;
+    }
+    let kids = significant_children(el);
+    if kids.len() == 1 {
+        if let XMLNode::Text(t) = kids[0] {
+            if !t.contains('\n') && !t.contains('\r') {
+                return Some(escape_text(t));
+            }
+        }
+    }
+    None
+}
+
+fn write_element(out: &mut String, el: &Element) {
+    let kids = significant_children(el);
+    let open = open_tag(el);
+    if kids.is_empty() {
+        out.push_str(&open);
+        out.push_str("/>\r\n");
+        return;
+    }
+    // One text / CDATA child: CDATA block for the Studio CDATA elements,
+    // inline text otherwise.
+    if kids.len() == 1 {
+        if let XMLNode::CData(c) | XMLNode::Text(c) = kids[0] {
+            let is_cdata_node = matches!(kids[0], XMLNode::CData(_));
+            if CDATA_ELEMENTS.contains(&el.name.as_str()) || is_cdata_node {
+                if !c.contains("]]>") {
+                    out.push_str(&open);
+                    out.push_str(">\r\n<![CDATA[");
+                    out.push_str(&to_crlf(c));
+                    out.push_str("]]>\r\n</");
+                    out.push_str(&el.name);
+                    out.push_str(">\r\n");
+                    return;
+                }
+                // Content holds "]]>" so CDATA is impossible; fall
+                // through to escaped inline text below.
+            }
+            if let Some(t) = inline_text(el) {
+                out.push_str(&open);
+                out.push('>');
+                out.push_str(&t);
+                out.push_str("</");
+                out.push_str(&el.name);
+                out.push_str(">\r\n");
+                return;
+            }
+            // Multi-line plain text: keep it, CRLF-normalised.
+            out.push_str(&open);
+            out.push('>');
+            out.push_str(&to_crlf(c));
+            out.push_str("</");
+            out.push_str(&el.name);
+            out.push_str(">\r\n");
+            return;
+        }
+    }
+    // All children are short inline-text elements: one line, as Studio
+    // writes <public><ConfigID>100</ConfigID><CatNum>...</CatNum></public>.
+    if !kids.is_empty()
+        && kids
+            .iter()
+            .all(|n| n.as_element().map(|e| inline_text(e).is_some()).unwrap_or(false))
+    {
+        out.push_str(&open);
+        out.push('>');
+        for n in &kids {
+            let e = n.as_element().unwrap();
+            out.push_str(&open_tag(e));
+            out.push('>');
+            out.push_str(&inline_text(e).unwrap());
+            out.push_str("</");
+            out.push_str(&e.name);
+            out.push('>');
+        }
+        out.push_str("</");
+        out.push_str(&el.name);
+        out.push_str(">\r\n");
+        return;
+    }
+    out.push_str(&open);
+    out.push_str(">\r\n");
+    for n in &kids {
+        match n {
+            XMLNode::Element(e) => write_element(out, e),
+            XMLNode::Text(t) => {
+                out.push_str(&escape_text(t));
+                out.push_str("\r\n");
+            }
+            XMLNode::CData(c) => {
+                out.push_str("<![CDATA[");
+                out.push_str(&to_crlf(c));
+                out.push_str("]]>\r\n");
+            }
+            XMLNode::Comment(c) => {
+                out.push_str("<!--");
+                out.push_str(c);
+                out.push_str("-->\r\n");
+            }
+            XMLNode::ProcessingInstruction(target, data) => {
+                out.push_str("<?");
+                out.push_str(target);
+                if let Some(d) = data {
+                    out.push(' ');
+                    out.push_str(d);
+                }
+                out.push_str("?>\r\n");
+            }
+        }
+    }
+    out.push_str("</");
+    out.push_str(&el.name);
+    out.push_str(">\r\n");
 }
 
 // ─── navigation helpers ───────────────────────────────────────────────────────
